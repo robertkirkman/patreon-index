@@ -1,0 +1,317 @@
+/* CSS Document */
+
+body {
+	background: #F5F1ED;
+	font-size: 18px;
+	line-height: 20px;
+	color: #5D4639;
+	margin: 0;
+	padding: 0;
+	word-wrap: break-word !important;
+	font-family: 'Quattrocento Sans', sans-serif;
+}
+
+h1 {
+	font-size: 60px;
+	text-align: center;
+	color: #FFF;
+}
+
+h3 {
+	font-size: 30px;
+	line-height: 34px;
+	text-align: center;
+	color: #FFF;
+}
+
+h1 {
+	margin-top: 100px;
+	text-align: center;
+	color: #F5F1ED;
+	font-size: 60px;
+	line-height: 70px;
+	font-family: 'Cinzel', 'serif';
+}
+
+#container {
+	margin: 0 auto;
+	max-width: 890px;
+}
+
+p {
+	text-align: center;
+}
+
+.toggle,
+[id^=drop] {
+	display: none;
+}
+
+/* Giving a background-color to the nav container. */
+nav {
+	margin: 0;
+	padding: 0;
+	background-color: #C0C782;
+	line-height: 32px;
+	font-family: 'Cinzel', 'serif';
+}
+
+#logo {
+	display: block;
+	line-height: 60px;
+	color: #F5F1ED;
+	padding: 0;
+	width: 100%;
+	text-align: left;
+	float: none;
+	font-size: 34px;
+	text-indent: 15px;
+}
+
+#pagename {
+	display: block;
+	line-height: 60px;
+	color: #F5F1ED;
+	background-color: #A7B151;
+	padding: 0;
+	width: 100%;
+	text-align: left;
+	float: none;
+	font-size: 15px;
+	text-indent: 15px;
+}
+
+/* Since we'll have the "ul li" "float:left"
+ * we need to add a clear after the container. */
+
+nav:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
+/* Removing padding, margin and "list-style" from the "ul",
+ * and adding "position:reltive" */
+nav ul {
+	float: none;
+	padding: 0;
+	margin: 0;
+	list-style: none;
+	position: relative;
+}
+
+/* Positioning the navigation items inline */
+nav ul li {
+	margin: 0px;
+	display: inline-block;
+	float: none;
+	background-color: #C0C782;
+}
+
+/* Styling the links */
+nav a {
+	display: block;
+	padding: 14px 17px;
+	color: #FFF;
+	font-size: 15px;
+	text-decoration: none;
+}
+
+
+nav ul li ul li:hover {
+	background: #5D4639;
+}
+
+/* Background color change on Hover */
+nav a:hover {
+	background-color: #5D4639;
+}
+
+/* Hide Dropdowns by Default
+ * and giving it a position of absolute */
+nav ul ul {
+	display: none;
+	position: absolute;
+	/* has to be the same number as the "line-height" of "nav a" */
+	top: 60px;
+}
+
+/* Display Dropdowns on Hover */
+nav ul li:hover>ul {
+	display: inherit;
+}
+
+/* First Tier Dropdown */
+nav ul ul li {
+	width: 170px;
+	float: none;
+	display: list-item;
+	position: relative;
+}
+
+/* Second, Third and more Tiers	
+ * We move the 2nd and 3rd etc tier dropdowns to the left
+ * by the amount of the width of the first tier.
+*/
+nav ul ul ul li {
+	position: relative;
+	top: -60px;
+	/* has to be the same number as the "width" of "nav ul ul li" */
+	left: 170px;
+}
+
+/* Change ' +' in order to change the Dropdown symbol */
+li>a:after {
+	content: '';
+}
+
+li>a:only-child:after {
+	content: '';
+}
+
+/* Stylinf the toggle lable */
+.toggle {
+	display: block;
+	background-color: #C0C782;
+	padding: 14px 17px;
+	color: #FFF;
+	font-size: 15px;
+	text-decoration: none;
+	border: none;
+}
+
+.toggle:hover {
+	background-color: #A7B151;
+}
+
+/* Display Dropdown when clicked on Parent Lable */
+[id^=drop]:checked+ul {
+	display: block;
+}
+
+/* Change menu item's width to 100% */
+nav ul li {
+	display: block;
+	width: 100%;
+}
+
+nav ul ul .toggle,
+nav ul ul a {
+	padding: 0 40px;
+}
+
+nav ul ul ul a {
+	padding: 0 80px;
+}
+
+nav a:hover,
+nav ul ul ul a {
+	background-color: #A7B151;
+}
+
+nav ul li ul li .toggle,
+nav ul ul a,
+nav ul ul ul a {
+	padding: 14px 17px;
+	color: #000000;
+	text-indent: 15px;
+}
+
+
+nav ul li ul li .toggle,
+nav ul ul a {
+	background-color: #C4C1BE;
+}
+
+/* Hide Dropdowns by Default */
+nav ul ul {
+	float: none;
+	position: static;
+	color: #ffffff;
+	/* has to be the same number as the "line-height" of "nav a" */
+}
+
+/* Hide menus on hover */
+nav ul ul li:hover>ul,
+nav ul li:hover>ul {
+	display: none;
+}
+
+/* First Tier Dropdown */
+nav ul ul li {
+	display: block;
+	width: 100%;
+}
+
+nav ul ul ul li {
+	position: static;
+	/* has to be the same number as the "width" of "nav ul ul li" */
+}
+
+/* latin-ext */
+@font-face {
+	font-family: 'Cinzel';
+	font-style: normal;
+	font-weight: 400;
+	src: url(https://fonts.gstatic.com/s/cinzel/v16/8vIU7ww63mVu7gtR-kwKxNvkNOjw-tbnfYPlDX5Z.woff2) format('woff2');
+	unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+br {
+	display: block;
+	/* makes it have a width */
+	content: "";
+	/* clears default height */
+	margin-top: 7px;
+	/* change this to whatever height you want it */
+}
+
+/* latin */
+@font-face {
+	font-family: 'Cinzel';
+	font-style: normal;
+	font-weight: 400;
+	src: url(https://fonts.gstatic.com/s/cinzel/v16/8vIU7ww63mVu7gtR-kwKxNvkNOjw-tbnfY3lDQ.woff2) format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin-ext */
+@font-face {
+	font-family: 'Quattrocento Sans';
+	font-style: normal;
+	font-weight: 400;
+	src: url(https://fonts.gstatic.com/s/quattrocentosans/v17/va9c4lja2NVIDdIAAoMR5MfuElaRB0zHt0_uHA.woff2) format('woff2');
+	unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+	font-family: 'Quattrocento Sans';
+	font-style: normal;
+	font-weight: 400;
+	src: url(https://fonts.gstatic.com/s/quattrocentosans/v17/va9c4lja2NVIDdIAAoMR5MfuElaRB0zJt08.woff2) format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* latin-ext */
+@font-face {
+	font-family: 'Quattrocento Sans';
+	font-style: normal;
+	font-weight: 700;
+	src: url(https://fonts.gstatic.com/s/quattrocentosans/v17/va9Z4lja2NVIDdIAAoMR5MfuElaRB0RyklrfPXzwiQ.woff2) format('woff2');
+	unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* latin */
+@font-face {
+	font-family: 'Quattrocento Sans';
+	font-style: normal;
+	font-weight: 700;
+	src: url(https://fonts.gstatic.com/s/quattrocentosans/v17/va9Z4lja2NVIDdIAAoMR5MfuElaRB0RyklrRPXw.woff2) format('woff2');
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+.date {
+	font-size: 16px;
+	text-align: right;
+}
