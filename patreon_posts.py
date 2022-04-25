@@ -102,7 +102,7 @@ def download_source(profile_path, title_class, captcha_xpath, button_xpath, url)
     driver = Firefox(firefox_profile=profile)
     driver.maximize_window()
     driver.get(url)
-    time.sleep(15)
+    time.sleep(30)
     duplicates = False
     while not duplicates:
         try:
@@ -130,8 +130,8 @@ def check_for_captcha(driver, captcha_xpath):
 
 
 def main():
-    all_profile_path = "/home/tacokoneko/python/rita/patreon/profile"
-    public_profile_path = "/home/tacokoneko/python/rita/patreon/profile-alt"
+    all_profile_path = "/home/rita/patreon/profile"
+    public_profile_path = "/home/rita/patreon/profile-alt"
     url = "https://www.patreon.com/RitaKirkmanStudio/posts"
     title_class = "sc-1di2uql-1 wkoTA"
     tag_class = "sc-jrQzAO WqDYW"
