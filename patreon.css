@@ -51,7 +51,7 @@ p {
 nav {
 	margin: 0;
 	padding: 0;
-	background-color: #C0C782;
+	background-color: #F5F1ED;
 	line-height: 32px;
 	font-family: 'Cinzel', 'serif';
 }
@@ -59,6 +59,7 @@ nav {
 #logo {
 	display: block;
 	line-height: 60px;
+    background-color: #C0C782;
 	color: #F5F1ED;
 	padding: 0;
 	width: 100%;
@@ -70,6 +71,7 @@ nav {
 
 #pagename {
 	display: block;
+    margin-top: 10px;
 	line-height: 60px;
 	color: #F5F1ED;
 	background-color: #A7B151;
@@ -77,7 +79,7 @@ nav {
 	width: 100%;
 	text-align: left;
 	float: none;
-	font-size: 15px;
+	font-size: 18px;
 	text-indent: 15px;
 }
 
@@ -315,3 +317,4 @@ br {
 	font-size: 16px;
 	text-align: right;
 }
+

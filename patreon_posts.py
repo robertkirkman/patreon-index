@@ -1,7 +1,9 @@
 #!/bin/python3
+import re
 import sys
 import time
 import jinja2
+import operator
 from datetime import date
 from selenium.webdriver import Firefox
 from selenium.webdriver import FirefoxProfile
@@ -54,17 +56,30 @@ def check_for_duplicate_posts(source, title_class):
 
 
 def filter_tags(post, tags):
+    keep = True
+    if not post.tags:
+        print(post.title)
     for tag in tags:
-        if tag in post.tags:
-            return True
-    return False
+        if tag not in post.tags:
+            keep = False
+    return keep
 
 
-def filter_posts(posts, with_tags, without_tags):
+def filter_posts(posts, sort, with_tags, without_tags):
     if with_tags:
         posts = [post for post in posts if filter_tags(post, with_tags)]
     if without_tags:
         posts = [post for post in posts if not filter_tags(post, without_tags)]
+    match sort:
+        case "alphabetical":
+            keyfun = operator.attrgetter("title")
+            posts.sort(key=keyfun, reverse=True)
+        case "ordinal":
+            #someone on SO said python lambda function syntax is cancer lol
+            keyfun = lambda post : list(map(int, re.findall(r'\d+', post.title)))[0] if list(map(int, re.findall(r'\d+', post.title))) else 0
+            posts.sort(key=keyfun, reverse=True)
+        case _:
+            pass
     return posts
 
 
@@ -85,8 +100,8 @@ def extract_posts(source, title_class, tag_class):
     return posts
 
 
-def generate_page(posts, filename, with_tags=[], without_tags=[]):
-    posts = filter_posts(posts, with_tags, without_tags)
+def generate_page(posts, filename, with_tags=[], without_tags=[], sort="none"):
+    posts = filter_posts(posts, sort, with_tags, without_tags)
     current_date = date.today()
     page = (
         jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
@@ -137,6 +152,7 @@ def main():
     tag_class = "sc-jrQzAO WqDYW"
     captcha_xpath = '//div[contains(., "robot")]'
     button_xpath = "//div[contains(concat(' ', normalize-space(@class), ' '), ' sc-llYSUQ bmzcNW ') and text()='Load more']"
+    vos_sort = "ordinal"
     vos_with_tags = [
         "VOS day",
     ]
@@ -219,12 +235,12 @@ def main():
 
     generate_page(all_posts, "ALL")
 
-    generate_page(all_posts, "ALL VOS", vos_with_tags)
-    generate_page(all_posts, "VOS UNDERPAINTING", vos_underpaintings_with_tags)
-    generate_page(all_posts, "VOS PASTELING", vos_pasteling_with_tags)
-    generate_page(all_posts, "VOS PORTRAIT", vos_portraits_with_tags)
-    generate_page(all_posts, "VOS ANIMAL", vos_animals_with_tags)
-    generate_page(all_posts, "OTHER VOS", vos_with_tags, vos_other_without_tags)
+    generate_page(all_posts, "ALL VOS", vos_with_tags, sort=vos_sort)
+    generate_page(all_posts, "VOS UNDERPAINTING", vos_underpaintings_with_tags, sort=vos_sort)
+    generate_page(all_posts, "VOS PASTELING", vos_pasteling_with_tags, sort=vos_sort)
+    generate_page(all_posts, "VOS PORTRAIT", vos_portraits_with_tags, sort=vos_sort)
+    generate_page(all_posts, "VOS ANIMAL", vos_animals_with_tags, sort=vos_sort)
+    generate_page(all_posts, "OTHER VOS", vos_with_tags, vos_other_without_tags, sort=vos_sort)
 
     generate_page(public_posts, "ALL PUBLIC")
 
