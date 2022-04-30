@@ -1,0 +1,9 @@
+*.log
+*.pickle
+*.webm
+*.webp
+*.jpg
+profile
+__pycache__
+*.txt
+[A-Z]*.html

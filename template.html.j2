@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang=en>
+
+<head>
+    <meta charset=utf-8>
+    <title>Rita Kirkman Patreon Index</title>
+    <link rel="stylesheet" href="patreon.css">
+</head>
+
+<body>
+    <nav>
+        <div id="logo">Patreon Index</div>
+        <input type="checkbox" id="drop" />
+        <ul class="menu">
+            <li><a href="ALL.html">ALL POSTS</a></li>
+            <li>
+                <!-- First Tier Drop Down -->
+                <label for="drop-1" class="toggle">PREMIUM VIDEO POSTS&nbsp;&nbsp;&raquo;</label>
+                <input type="checkbox" id="drop-1" />
+                <ul>
+                    <li>   
+                        <!-- Second Tier Drop Down -->        
+                        <label for="drop-2" class="toggle">VOS EPISODES&nbsp;&nbsp;&raquo;</label>
+                        <input type="checkbox" id="drop-2"/>
+                        <ul>
+                            <li><a href="ALL VOS EPISODE.html">ALL VOS EPISODES</a></li>
+			   <li><a href="VOS PAINT-ALONG.html">PAINT-ALONGS</a></li>
+                            <li><a href="VOS ANIMAL.html">ANIMALS</a></li>
+                            <li><a href="VOS PORTRAIT.html">PORTRAITS</a></li>
+			   <li><a href="VOS PASTELING.html">PASTELING</a></li>
+			   <li><a href="VOS LANDSCAPE.html">LANDSCAPES</a></li>
+                            <li><a href="VOS UNDERPAINTING.html">UNDERPAINTING</a></li>
+                            <li><a href="OTHER VOS EPISODE.html">OTHER VOS EPISODES</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="OTHER PREMIUM.html">OTHER PREMIUM POSTS</a></li>
+                </ul>
+            </li>
+            <li>
+                <!-- First Tier Drop Down -->
+                <label for="drop-3" class="toggle">PUBLIC POSTS&nbsp;&nbsp;&raquo;</label>
+                <input type="checkbox" id="drop-3" />
+                <ul>
+                    <li><a href="ALL PUBLIC.html">ALL PUBLIC POSTS</a></li>
+		   <li><a href="PROGRESS PIC.html">PROGRESS PICS</a></li>
+                    <li><a href="SPEED VIDEO.html">SPEED VIDEOS</a></li>
+                    <li><a href="VIDEO MONTAGE.html">VIDEO MONTAGES</a></li>
+		   <li><a href="ART TIP.html">ART TIPS</a></li>
+		   <li><a href="CONVERSATION.html">CONVERSATION</a></li>
+		   <li><a href="PROBLEM SOLVING.html">PROBLEM SOLVING</a></li>
+		   <li><a href="BONUS FULL-LENGTH VIDEO.html">BONUS FULL-LENGTH VIDEOS!</a></li>
+		   <li><a href="OTHER PUBLIC.html">OTHER PUBLIC POSTS</a></li>
+                </ul>
+            </li>
+            <li>
+                <!-- First Tier Drop Down -->
+                <label for="drop-4" class="toggle">BY SUBJECT&nbsp;&nbsp;&raquo;</label>
+                <input type="checkbox" id="drop-4" />
+                <ul>
+                    <li><a href="PORTRAIT.html">PORTRAITS</a></li>
+                    <li><a href="COW.html">COW</a></li>
+                    <li><a href="SHEEP.html">SHEEP</a></li>
+                    <li><a href="BIRD.html">BIRD</a></li>
+                    <li><a href="WILDLIFE.html">WILDLIFE</a></li>
+                    <li><a href="PET PORTRAIT.html">PET PORTRAITS</a></li>
+                    <li><a href="OTHER.html">OTHER</a></li>
+                </ul>
+            </li>
+        </ul>
+        <div id="pagename">list of {{filename}} posts</div>
+    </nav>
+    <div class="date">
+        Last updated {{date}}.<br><br>
+    </div>
+    <div class="posts">
+        {% for post in posts %}
+	<img class="media_type" src="{{post.media_type}}.png" alt="image not found">
+	<a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
+	{% if post.media_type == "video" %}
+	<div class="viewport_{{posts.index(post)}}">
+	  <video id="video_{{posts.index(post)}}" class="fade" loop>
+            <source src="{{post.slug}}.webm" type="video/webm">
+            Your browser does not support HTML5 video.
+          </video>
+        </div>
+	{% elif post.media_type == "gif" %}
+	<div class="viewport_{{posts.index(post)}}">
+	  <img id="img_{{posts.index(post)}}" class="fade" src="{{post.image}}" alt="image not found">
+        </div>
+	{% elif post.media_type == "image" %}
+	<div class="viewport_{{posts.index(post)}}">
+          <img id="img_{{posts.index(post)}}" class="fade" src="{{post.slug}}.jpg" alt="image not found">
+        </div>
+	{% endif %}
+        {% endfor %}
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
+    <script>
+    {% for post in posts %}
+    {% if post.media_type == "video" %}
+      var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
+      var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
+      var video_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
+      post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1, video_{{posts.index(post)}}) }, false);
+      post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0, video_{{posts.index(post)}}) }, false);
+      $(window).on('mousemove', moveVideo_{{posts.index(post)}});
+
+      function moveVideo_{{posts.index(post)}}(e) {
+        var aspect_ratio = video_{{posts.index(post)}}.videoWidth / video_{{posts.index(post)}}.videoHeight;
+	var landscape = video_{{posts.index(post)}}.videoWidth > video_{{posts.index(post)}}.videoHeight;
+	if (landscape) {
+	  TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
+	  TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+            css: {
+              width: 300
+            }
+          });
+       	} else {
+          TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
+	  TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+            css: {
+              height: 300,
+            }
+          });
+        }
+        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+          css: {
+            'aspect-ratio': aspect_ratio,
+            left: e.pageX + 5,
+            top: e.pageY + 15
+          }
+        });
+      }
+
+      async function playVideo_{{posts.index(post)}}(opacity, video) {
+        if (opacity) {
+          try {
+            video_{{posts.index(post)}}.muted = false;
+            await video_{{posts.index(post)}}.play();
+          } catch(err) {
+            video_{{posts.index(post)}}.muted = true;
+            video_{{posts.index(post)}}.play();
+          }
+        } else {
+          video_{{posts.index(post)}}.pause();
+        }
+        TweenLite.set(".fade", {"opacity":0})
+	TweenLite.to(video_{{posts.index(post)}}, 0, {
+          css: {
+            opacity: opacity
+          }
+        });
+      }
+
+    {% elif post.media_type == "image" or post.media_type == "gif" %}
+      var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
+      var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
+      var img_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
+      post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1, img_{{posts.index(post)}}) }, false);
+      post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0, img_{{posts.index(post)}}) }, false);
+      $(window).on('mousemove', moveImage_{{posts.index(post)}});
+
+      function moveImage_{{posts.index(post)}}(e) {
+	var aspect_ratio = img_{{posts.index(post)}}.naturalWidth / img_{{posts.index(post)}}.naturalHeight;
+	var landscape = img_{{posts.index(post)}}.naturalWidth > img_{{posts.index(post)}}.naturalHeight;
+	if (landscape) {
+	  TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
+	  TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+            css: {
+              width: 300
+            }
+          });
+       	} else {
+          TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
+	  TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+            css: {
+              height: 300,
+            }
+          });
+        }
+        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+          css: {
+            'aspect-ratio': aspect_ratio,
+            left: e.pageX + 5,
+            top: e.pageY + 15
+          }
+        });
+      }
+
+      function showImage_{{posts.index(post)}}(opacity) {
+	TweenLite.set(".fade", {"opacity":0})
+	TweenLite.to(img_{{posts.index(post)}}, 0, {
+          css: {
+            opacity: opacity
+          }
+        });
+      }
+    {% endif %}
+    {% endfor %}
+    </script>
+</body>
+
+</html>
