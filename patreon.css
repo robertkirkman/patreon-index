@@ -171,7 +171,7 @@ li>a:only-child:after {
 	content: '';
 }
 
-/* Stylinf the toggle lable */
+/* Styling the toggle label */
 .toggle {
 	display: block;
 	background-color: #C0C782;
@@ -200,7 +200,7 @@ li>a:only-child:after {
 	position: absolute;
 }
 
-/* Display Dropdown when clicked on Parent Lable */
+/* Display Dropdown when clicked on Parent Label */
 [id^=drop]:checked+ul {
 	display: block;
 }

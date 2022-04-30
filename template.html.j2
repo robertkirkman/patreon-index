@@ -107,38 +107,27 @@
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 var video_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0) }, false);
-                $(window).on('mousemove', moveVideo_{{posts.index(post)}});
-                
-                // calculate the aspect ratio of the video and scale it by the longest side
-                function moveVideo_{{posts.index(post)}}(e) {
-                    var aspect_ratio = video_{{posts.index(post)}}.videoWidth / video_{{posts.index(post)}}.videoHeight;
-                    var landscape = video_{{posts.index(post)}}.videoWidth > video_{{posts.index(post)}}.videoHeight;
-                    if (landscape) {
-                        TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
-                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                            css: {
-                                width: 300
-                            }
-                        });
-                    } else {
-                        TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
-                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                            css: {
-                                height: 300
-                            }
-                        });
-                    }
-                    // position it relative to the cursor
+                var aspect_ratio = video_{{posts.index(post)}}.videoWidth / video_{{posts.index(post)}}.videoHeight;
+                var landscape = video_{{posts.index(post)}}.videoWidth > video_{{posts.index(post)}}.videoHeight;
+                if (landscape) {
+                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
-                            'aspect-ratio': aspect_ratio,
-                            left: e.pageX + 5,
-                            top: e.pageY + 15
+                            width: 300,
+                            'aspect-ratio': aspect_ratio
+                        }
+                    });
+                } else {
+                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
+                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+                        css: {
+                            height: 300,
+                            'aspect-ratio': aspect_ratio
                         }
                     });
                 }
+                post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0) }, false);
                 
                 // play the video with audio, but if the browser blocks it, play the video without audio
                 async function playVideo_{{posts.index(post)}}(opacity) {
@@ -167,39 +156,28 @@
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 var img_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0) }, false);
-                $(window).on('mousemove', moveImage_{{posts.index(post)}});
-                
-                // calculate the aspect ratio of the media and scale it by limiting the length of the longest side
-                function moveImage_{{posts.index(post)}}(e) {
-                    var aspect_ratio = img_{{posts.index(post)}}.naturalWidth / img_{{posts.index(post)}}.naturalHeight;
-                    var landscape = img_{{posts.index(post)}}.naturalWidth > img_{{posts.index(post)}}.naturalHeight;
-                    if (landscape) {
-                        TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
-                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                            css: {
-                                width: 300
-                            }
-                        });
-                    } else {
-                        TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
-                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                            css: {
-                                height: 300
-                            }
-                        });
-                    }
-                    // position it relative to the cursor
+                var aspect_ratio = img_{{posts.index(post)}}.naturalWidth / img_{{posts.index(post)}}.naturalHeight;
+                var landscape = img_{{posts.index(post)}}.naturalWidth > img_{{posts.index(post)}}.naturalHeight;
+                if (landscape) {
+                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
-                            'aspect-ratio': aspect_ratio,
-                            left: e.pageX + 5,
-                            top: e.pageY + 15
+                            width: 300,
+                            'aspect-ratio': aspect_ratio
+                        }
+                    });
+                } else {
+                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
+                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+                        css: {
+                            height: 300,
+                            'aspect-ratio': aspect_ratio
                         }
                     });
                 }
-                
+                post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0) }, false);
+                              
                 // set the opacity of the media as appropriate
                 function showImage_{{posts.index(post)}}(opacity) {
                     TweenLite.set(".fade", {"opacity":0})
@@ -211,6 +189,19 @@
                 }
             {% endif %}
         {% endfor %}
+        $(window).on('mousemove', move);
+        // calculate the aspect ratio of the media and scale it by the longest side
+        function move(e) {
+            // position it relative to the cursor
+            {% for post in posts if post.media_type == "video" or post.media_type == "image" or post.media_type == "gif" %}
+                TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+                    css: {
+                        left: e.pageX + 5,
+                        top: e.pageY + 15
+                    }
+                });
+            {% endfor %}
+        }
     </script>
 </body>
 
