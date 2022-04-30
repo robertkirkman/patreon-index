@@ -5,8 +5,9 @@
 #xrandr --output LVDS-1 --mode $mode
 cd ~/patreon
 #./patreon_posts.py --sync-posts --sync-media --sync-pages 1
-./patreon_posts.py --sync-pages --sync-media --sync-pages
-#./patreon_posts.py --sync-pages
+#./patreon_posts.py --sync-pages --sync-media --sync-pages
+./patreon_posts.py --sync-pages
+cp patreon.html.j2 /var/www/html/patreon.html
 cp -- *.html /var/www/html
 cp -- *.css /var/www/html
 cp -- *.png /var/www/html

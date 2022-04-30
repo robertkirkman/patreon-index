@@ -9,7 +9,7 @@
 
 <body>
     <nav>
-        <div id="logo">Patreon Index</div>
+        <div><a id="logo" href="patreon.html">Patreon Index</a></div>
         <input type="checkbox" id="drop" />
         <ul class="menu">
             <li><a href="ALL.html">ALL POSTS</a></li>
@@ -24,11 +24,11 @@
                         <input type="checkbox" id="drop-2" />
                         <ul>
                             <li><a href="ALL VOS EPISODE.html">ALL VOS EPISODES</a></li>
-                            <li><a href="VOS PAINT-ALONG.html">PAINT-ALONGS</a></li>
                             <li><a href="VOS ANIMAL.html">ANIMALS</a></li>
-                            <li><a href="VOS PORTRAIT.html">PORTRAITS</a></li>
-                            <li><a href="VOS PASTELING.html">PASTELING</a></li>
                             <li><a href="VOS LANDSCAPE.html">LANDSCAPES</a></li>
+                            <li><a href="VOS PAINT-ALONG.html">PAINT-ALONGS</a></li>
+                            <li><a href="VOS PASTELING.html">PASTELING</a></li>
+                            <li><a href="VOS PORTRAIT.html">PORTRAITS</a></li>
                             <li><a href="VOS UNDERPAINTING.html">UNDERPAINTING</a></li>
                             <li><a href="OTHER VOS EPISODE.html">OTHER VOS EPISODES</a></li>
                         </ul>
@@ -42,13 +42,13 @@
                 <input type="checkbox" id="drop-3" />
                 <ul>
                     <li><a href="ALL PUBLIC.html">ALL PUBLIC POSTS</a></li>
+                    <li><a href="ART TIP.html">ART TIPS</a></li>
+                    <li><a href="BONUS FULL-LENGTH VIDEO.html">BONUS FULL-LENGTH VIDEOS!</a></li>
+                    <li><a href="CONVERSATION.html">CONVERSATION</a></li>
+                    <li><a href="PROBLEM SOLVING.html">PROBLEM SOLVING</a></li>
                     <li><a href="PROGRESS PIC.html">PROGRESS PICS</a></li>
                     <li><a href="SPEED VIDEO.html">SPEED VIDEOS</a></li>
                     <li><a href="VIDEO MONTAGE.html">VIDEO MONTAGES</a></li>
-                    <li><a href="ART TIP.html">ART TIPS</a></li>
-                    <li><a href="CONVERSATION.html">CONVERSATION</a></li>
-                    <li><a href="PROBLEM SOLVING.html">PROBLEM SOLVING</a></li>
-                    <li><a href="BONUS FULL-LENGTH VIDEO.html">BONUS FULL-LENGTH VIDEOS!</a></li>
                     <li><a href="OTHER PUBLIC.html">OTHER PUBLIC POSTS</a></li>
                 </ul>
             </li>
@@ -57,15 +57,16 @@
                 <label for="drop-4" class="toggle">BY SUBJECT&nbsp;&nbsp;&raquo;</label>
                 <input type="checkbox" id="drop-4" />
                 <ul>
-                    <li><a href="PORTRAIT.html">PORTRAITS</a></li>
-                    <li><a href="COW.html">COW</a></li>
-                    <li><a href="SHEEP.html">SHEEP</a></li>
                     <li><a href="BIRD.html">BIRD</a></li>
-                    <li><a href="WILDLIFE.html">WILDLIFE</a></li>
+                    <li><a href="COW.html">COW</a></li>
                     <li><a href="PET PORTRAIT.html">PET PORTRAITS</a></li>
+                    <li><a href="PORTRAIT.html">PORTRAITS</a></li>
+                    <li><a href="SHEEP.html">SHEEP</a></li>
+                    <li><a href="WILDLIFE.html">WILDLIFE</a></li>
                     <li><a href="OTHER.html">OTHER</a></li>
                 </ul>
             </li>
+            <li><a href="TAGS.html">BY TAG</a></li>
         </ul>
         <div id="pagename">list of {{filename}} posts</div>
     </nav>
@@ -73,9 +74,11 @@
         Last updated {{date}}.<br><br>
     </div>
     <div class="posts">
+        <!-- python jinja2 iterates every tag to create a long list of links -->
         {% for post in posts %}
             <img class="media_type" src="{{post.media_type}}.png" alt="image not found">
             <a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
+            <!-- including div classes to contain every thumbnail media embed -->
             {% if post.media_type == "video" %}
                 <div class="viewport_{{posts.index(post)}}">
                     <video id="video_{{posts.index(post)}}" class="fade" loop>
@@ -97,15 +100,18 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
     <script>
+        // python jinja2 iterates this entire block to generate this code for every post in the whole page
         {% for post in posts %}
+            // for videos, play and pause are needed
             {% if post.media_type == "video" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 var video_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1, video_{{posts.index(post)}}) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0, video_{{posts.index(post)}}) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0) }, false);
                 $(window).on('mousemove', moveVideo_{{posts.index(post)}});
                 
+                // calculate the aspect ratio of the video and scale it by the longest side
                 function moveVideo_{{posts.index(post)}}(e) {
                     var aspect_ratio = video_{{posts.index(post)}}.videoWidth / video_{{posts.index(post)}}.videoHeight;
                     var landscape = video_{{posts.index(post)}}.videoWidth > video_{{posts.index(post)}}.videoHeight;
@@ -124,6 +130,7 @@
                             }
                         });
                     }
+                    // position it relative to the cursor
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
                             'aspect-ratio': aspect_ratio,
@@ -133,7 +140,8 @@
                     });
                 }
                 
-                async function playVideo_{{posts.index(post)}}(opacity, video) {
+                // play the video with audio, but if the browser blocks it, play the video without audio
+                async function playVideo_{{posts.index(post)}}(opacity) {
                     if (opacity) {
                         try {
                             video_{{posts.index(post)}}.muted = false;
@@ -145,6 +153,7 @@
                     } else {
                         video_{{posts.index(post)}}.pause();
                     }
+                    // change the opacity whenever the video playing status changes
                     TweenLite.set(".fade", {"opacity":0})
                     TweenLite.to(video_{{posts.index(post)}}, 0, {
                         css: {
@@ -152,14 +161,17 @@
                         }
                     });
                 }
+
+            // for non-videos, play and pause are not used, only opacity
             {% elif post.media_type == "image" or post.media_type == "gif" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 var img_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1, img_{{posts.index(post)}}) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0, img_{{posts.index(post)}}) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0) }, false);
                 $(window).on('mousemove', moveImage_{{posts.index(post)}});
                 
+                // calculate the aspect ratio of the media and scale it by limiting the length of the longest side
                 function moveImage_{{posts.index(post)}}(e) {
                     var aspect_ratio = img_{{posts.index(post)}}.naturalWidth / img_{{posts.index(post)}}.naturalHeight;
                     var landscape = img_{{posts.index(post)}}.naturalWidth > img_{{posts.index(post)}}.naturalHeight;
@@ -178,6 +190,7 @@
                             }
                         });
                     }
+                    // position it relative to the cursor
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
                             'aspect-ratio': aspect_ratio,
@@ -187,6 +200,7 @@
                     });
                 }
                 
+                // set the opacity of the media as appropriate
                 function showImage_{{posts.index(post)}}(opacity) {
                     TweenLite.set(".fade", {"opacity":0})
                     TweenLite.to(img_{{posts.index(post)}}, 0, {

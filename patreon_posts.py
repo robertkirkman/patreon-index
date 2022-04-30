@@ -43,6 +43,17 @@ class post:
         self.tags = tags
 
 
+class tag:
+    name = ""
+    nb_name = ""
+    count = 0
+
+    def __init__(self, name, nb_name, count):
+        self.name = name
+        self.nb_name = nb_name
+        self.count = count
+
+
 def main():
     pickle_filename = "profile.pickle"
     get_posts = "--sync-posts" in sys.argv
@@ -444,6 +455,8 @@ def generate_pages(pickle_filename):
         without_tags=portraits + cow + sheep + bird + wildlife + pet_portrait,
     )
 
+    generate_tag_pages(posts)
+
 
 def generate_page(posts, filename, with_tags=[], without_tags=[], sort="none"):
     posts = filter_posts(posts, with_tags, without_tags)
@@ -456,6 +469,40 @@ def generate_page(posts, filename, with_tags=[], without_tags=[], sort="none"):
     )
     with open(filename + ".html", "w") as f:
         f.write(page)
+
+
+def generate_tag_pages(posts):
+    filename = "TAGS"
+    tags = extract_tags(posts)
+    current_date = date.today()
+    page = (
+        jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
+        .get_template("tags_template.html.j2")
+        .render(filename=filename, date=current_date, tags=tags)
+    )
+    with open(filename + ".html", "w") as f:
+        f.write(page)
+    for tag in tags:
+        generate_page(posts, tag.name, [tag.name])
+
+
+def extract_tags(posts):
+    tags = []
+    for post in posts:
+        for post_tag in post.tags:
+            if post_tag not in (tag.name for tag in tags):
+                tags.append(
+                    tag(
+                        post_tag,
+                        post_tag.replace(" ", "&nbsp;").replace("-", "&#8209;"),
+                        1,
+                    )
+                )
+            else:
+                next(tag for tag in tags if tag.name == post_tag).count += 1
+    keyfun = lambda tag: tag.name.upper()
+    tags.sort(key=keyfun, reverse=False)
+    return tags
 
 
 def filter_posts(posts, with_tags, without_tags):

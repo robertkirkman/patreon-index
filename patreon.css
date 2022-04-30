@@ -56,19 +56,6 @@ nav {
 	font-family: 'Cinzel', 'serif';
 }
 
-#logo {
-	display: block;
-	line-height: 60px;
-	background-color: #C0C782;
-	color: #F5F1ED;
-	padding: 0;
-	width: 100%;
-	text-align: left;
-	float: none;
-	font-size: 34px;
-	text-indent: 15px;
-}
-
 #pagename {
 	display: block;
 	margin-top: 10px;
@@ -117,6 +104,19 @@ nav a {
 	color: #FFF;
 	font-size: 15px;
 	text-decoration: none;
+}
+
+#logo {
+	display: block;
+	line-height: 60px;
+	background-color: #C0C782;
+	color: #F5F1ED;
+	padding: 0;
+	width: 100%;
+	text-align: left;
+	float: none;
+	font-size: 34px;
+	text-indent: 15px;
 }
 
 
@@ -220,6 +220,7 @@ nav ul ul ul a {
 	padding: 0 80px;
 }
 
+#logo:hover,
 nav a:hover,
 nav ul ul ul a {
 	background-color: #A7B151;
@@ -329,6 +330,11 @@ br {
 
 .posts {
 	float: left;
+}
+
+.tags {
+	text-align: left;
+	line-height: 25px;
 }
 
 .date {
