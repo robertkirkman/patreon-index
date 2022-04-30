@@ -1,4 +1,5 @@
 #!/bin/bash
+# work-in-progress/temporary wrapper
 #xrandr --newmode $(cvt 464 1000 60 | grep Modeline | cut -d' ' -f2- -)
 #mode=$(xrandr | grep 464 | cut -d'(' -f2- | sed 's/).*//' | grep 0x)
 #xrandr --addmode LVDS-1 $mode

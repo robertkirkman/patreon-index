@@ -24,6 +24,7 @@ from selenium.webdriver.common.by import By
 from yt_dlp import YoutubeDL
 
 
+# post class to store the data necessary to generate post pages
 class post:
     title = ""
     slug = ""
@@ -43,6 +44,7 @@ class post:
         self.tags = tags
 
 
+# tag class to store the data necessary to generate tag page
 class tag:
     name = ""
     nb_name = ""
@@ -54,6 +56,8 @@ class tag:
         self.count = count
 
 
+# allow user to choose between downloading all metadata, downloading only n pages of metadata,
+# downloading all media, or generating all pages
 def main():
     pickle_filename = "profile.pickle"
     get_posts = "--sync-posts" in sys.argv
@@ -74,6 +78,8 @@ def main():
         generate_pages(pickle_filename)
 
 
+# download new data from patreon.com and, if applicable, merge it with existing list of data,
+# replacing any old data that conflicts, serialize and save to system
 def sync_posts(pickle_filename, get_videos=False, page_count=0):
     source_filename = "profile.txt"
     title_class = "sc-1di2uql-1 wkoTA"
@@ -109,6 +115,8 @@ def sync_posts(pickle_filename, get_videos=False, page_count=0):
         pickle.dump(posts, file)
 
 
+# use selenium geckodriver firefox to automatically scrape patreon.com for the needed data
+# this step requires user intervention within 30 seconds to manually complete the captcha that is likely to appear
 def download_source(title_class, get_videos, page_count):
     profile_path = "/home/rita/patreon/profile"
     url = "https://www.patreon.com/RitaKirkmanStudio/posts"
@@ -157,15 +165,7 @@ def download_source(title_class, get_videos, page_count):
     return source
 
 
-def scroll_to_element(driver, object):
-    x = object.location["x"]
-    y = object.location["y"]
-    scroll_by_coord = "window.scrollTo(%s,%s);" % (x, y)
-    scroll_nav_out_of_way = "window.scrollBy(0, -120);"
-    driver.execute_script(scroll_by_coord)
-    driver.execute_script(scroll_nav_out_of_way)
-
-
+# use webdriver find element by xpath, scroll to element, move to element, then click element
 def click_button(driver, button_xpath):
     button = driver.find_element(by=By.XPATH, value=button_xpath)
     scroll_to_element(driver, button)
@@ -175,6 +175,17 @@ def click_button(driver, button_xpath):
     actions.perform()
 
 
+# scroll webdriver to element
+def scroll_to_element(driver, object):
+    x = object.location["x"]
+    y = object.location["y"]
+    scroll_by_coord = "window.scrollTo(%s,%s);" % (x, y)
+    scroll_nav_out_of_way = "window.scrollBy(0, -120);"
+    driver.execute_script(scroll_by_coord)
+    driver.execute_script(scroll_nav_out_of_way)
+
+
+# use bs4 on a page source to check whether it contains duplicate posts
 def check_for_duplicate_posts(source, title_class):
     soup = BeautifulSoup(source, features="lxml")
     titles = []
@@ -186,6 +197,8 @@ def check_for_duplicate_posts(source, title_class):
     return False
 
 
+# use bs4 on a sufficiently populated patreon posts page source to pick the data out of it
+# and manipulate it into a list of post objects
 def extract_posts(source, title_class, tag_class):
     posts = []
     soup = BeautifulSoup(source, features="lxml")
@@ -223,6 +236,7 @@ def extract_posts(source, title_class, tag_class):
     return posts
 
 
+# extract youtube video id from a youtube url
 def get_vid(url):
     """Returns Video_ID extracting from the given url of Youtube
 
@@ -255,6 +269,8 @@ def get_vid(url):
         return ""
 
 
+# use yt-dlp, ffmpeg and pillow to download all non-GIF media referenced by the collected metadata
+# and process it by scaling and trimming as desired
 def download_media(pickle_filename):
     if exists(pickle_filename):
         with open(pickle_filename, "rb") as file:
@@ -314,6 +330,7 @@ def download_media(pickle_filename):
         print(pickle_filename + " missing! Cannot download media.")
 
 
+# choose only vp9 webms at least 240p for yt-dlp format selection
 def format_selector(ctx):
     """Select the best video and the best audio that won't result in an mkv.
     NOTE: This is just an example and does not handle all cases"""
@@ -321,7 +338,7 @@ def format_selector(ctx):
     # formats are already sorted worst to best
     formats = ctx.get("formats")[::-1]
 
-    # acodec='none' means there is no audio
+    # first strictly vp9 webm without audio that is at least 240p
     best_video = next(
         f
         for f in formats
@@ -350,6 +367,7 @@ def format_selector(ctx):
     }
 
 
+# deterministically convert strings into readable equivalents that are filename-friendly
 def slugify(value, allow_unicode=False):
     """
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
@@ -371,8 +389,11 @@ def slugify(value, allow_unicode=False):
     return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
+# generate all pages for the index in a modular way that can be rapidly prototyped
+# to demo for the client
 def generate_pages(pickle_filename):
     vos_sort = "ordinal"
+    # tags chosen by the client for a series of manually-chosen categories
     premium = ["Premium video post"]
     vos = ["VOS day"]
     paint_alongs = ["Paint-Along"]
@@ -394,6 +415,7 @@ def generate_pages(pickle_filename):
     wildlife = ["wildlife"]
     pet_portrait = ["pet portrait"]
 
+    # deserialize the previously-stored list of posts from pickle file
     if exists(pickle_filename):
         with open(pickle_filename, "rb") as file:
             posts = pickle.load(file)
@@ -401,6 +423,7 @@ def generate_pages(pickle_filename):
         print(pickle_filename + " missing! Cannot generate posts.")
         return
 
+    # generate all the pages needed for the index site
     generate_page(posts, "ALL")
 
     generate_page(posts, "ALL VOS EPISODE", premium + vos, sort=vos_sort)
@@ -458,6 +481,8 @@ def generate_pages(pickle_filename):
     generate_tag_pages(posts)
 
 
+# filter by tags and sort the posts, then use jinja2 to populate the page with data and write
+# it to a new file
 def generate_page(posts, filename, with_tags=[], without_tags=[], sort="none"):
     posts = filter_posts(posts, with_tags, without_tags)
     posts = sort_posts(posts, sort)
@@ -471,6 +496,8 @@ def generate_page(posts, filename, with_tags=[], without_tags=[], sort="none"):
         f.write(page)
 
 
+# derive a list of all tags from the list of posts, then iterate it to generate a tag homepage
+# and pages of posts sorted by tags
 def generate_tag_pages(posts):
     filename = "TAGS"
     tags = extract_tags(posts)
@@ -486,6 +513,8 @@ def generate_tag_pages(posts):
         generate_page(posts, tag.name, [tag.name])
 
 
+# count the occurrences of posts associated with each possible tag, store the data in a list of tags,
+# and generate a non-breaking title for the tag to display nicely on the tags page
 def extract_tags(posts):
     tags = []
     for post in posts:
@@ -505,6 +534,7 @@ def extract_tags(posts):
     return tags
 
 
+# filter the list of posts by tags inclusively and exclusively
 def filter_posts(posts, with_tags, without_tags):
     if with_tags:
         posts = [post for post in posts if include_tags(post, with_tags)]
@@ -513,6 +543,7 @@ def filter_posts(posts, with_tags, without_tags):
     return posts
 
 
+# keep only posts containing all given tags
 def include_tags(post, tags):
     keep = True
     for tag in tags:
@@ -521,6 +552,7 @@ def include_tags(post, tags):
     return keep
 
 
+# keep only posts containing none of the given tags
 def exclude_tags(post, tags):
     keep = True
     for tag in tags:
@@ -529,10 +561,12 @@ def exclude_tags(post, tags):
     return keep
 
 
+# sort posts alphabetically case-insensitive, ordinally by the first number detected,
+# or do not sort posts at all
 def sort_posts(posts, sort):
     match sort:
         case "alphabetical":
-            keyfun = attrgetter("title")
+            keyfun = lambda post: post.title.upper()
             posts.sort(key=keyfun, reverse=True)
         case "ordinal":
             keyfun = (

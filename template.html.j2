@@ -78,7 +78,7 @@
         {% for post in posts %}
             <img class="media_type" src="{{post.media_type}}.png" alt="image not found">
             <a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
-            <!-- including div classes to contain every thumbnail media embed -->
+            <!-- including divs to contain every thumbnail media embed -->
             {% if post.media_type == "video" %}
                 <div class="viewport_{{posts.index(post)}}">
                     <video id="video_{{posts.index(post)}}" class="fade" loop>
