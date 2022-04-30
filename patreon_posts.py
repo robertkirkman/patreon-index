@@ -206,6 +206,8 @@ def extract_posts(source, title_class, tag_class):
                 media_type = "video"
             if vid and "Premium video post" in tags:
                 media_type = "image"
+            if media_type == "video" and not vid:
+                media_type = "unknown"
             posts.append(post(title, slugify(title), url, image, vid, media_type, tags))
     return posts
 
