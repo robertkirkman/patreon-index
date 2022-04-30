@@ -7,3 +7,5 @@ profile
 __pycache__
 *.txt
 [A-Z]*.html
+*.lock
+*.toml
