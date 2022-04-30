@@ -367,7 +367,7 @@ def generate_pages(pickle_filename):
     paint_alongs = ["Paint-Along"]
     animals = ["animals"]
     portraits = ["portrait"]
-    landscapes = [""]
+    landscapes = ["landscape"]
     pasteling = ["pastel"]
     underpainting = ["underpainting"]
     progress_pics = ["progress pics"]
