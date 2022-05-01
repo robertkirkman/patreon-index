@@ -8,6 +8,25 @@
 </head>
 
 <body>
+    <!-- including divs to contain every thumbnail media embed -->
+    {% for post in posts %}
+        {% if post.media_type == "video" %}
+            <div class="viewport_{{posts.index(post)}}">
+                <video id="video_{{posts.index(post)}}" class="fade" loop>
+                    <source src="{{post.slug}}.webm" type="video/webm">
+                    Your browser does not support HTML5 video.
+                </video>
+            </div>
+        {% elif post.media_type == "gif" %}
+            <div class="viewport_{{posts.index(post)}}">
+                <img id="img_{{posts.index(post)}}" class="fade" src="{{post.image}}" alt="image not found">
+            </div>
+        {% elif post.media_type == "image" %}
+            <div class="viewport_{{posts.index(post)}}">
+                <img id="img_{{posts.index(post)}}" class="fade" src="{{post.slug}}.jpg" alt="image not found">
+            </div>
+        {% endif %}
+    {% endfor %}
     <nav>
         <div><a id="logo" href="patreon.html">Patreon Index</a></div>
         <input type="checkbox" id="drop" />
@@ -78,23 +97,6 @@
         {% for post in posts %}
             <img class="media_type" src="{{post.media_type}}.png" alt="image not found">
             <a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
-            <!-- including divs to contain every thumbnail media embed -->
-            {% if post.media_type == "video" %}
-                <div class="viewport_{{posts.index(post)}}">
-                    <video id="video_{{posts.index(post)}}" class="fade" loop>
-                        <source src="{{post.slug}}.webm" type="video/webm">
-                        Your browser does not support HTML5 video.
-                    </video>
-                </div>
-            {% elif post.media_type == "gif" %}
-                <div class="viewport_{{posts.index(post)}}">
-                    <img id="img_{{posts.index(post)}}" class="fade" src="{{post.image}}" alt="image not found">
-                </div>
-            {% elif post.media_type == "image" %}
-                <div class="viewport_{{posts.index(post)}}">
-                    <img id="img_{{posts.index(post)}}" class="fade" src="{{post.slug}}.jpg" alt="image not found">
-                </div>
-            {% endif %}
         {% endfor %}
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
@@ -179,7 +181,7 @@
                 post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0) }, false);
                               
                 // set the opacity of the media as appropriate
-                function showImage_{{posts.index(post)}}(opacity) {
+                async function showImage_{{posts.index(post)}}(opacity) {
                     TweenLite.set(".fade", {"opacity":0})
                     TweenLite.to(img_{{posts.index(post)}}, 0, {
                         css: {
@@ -189,17 +191,14 @@
                 }
             {% endif %}
         {% endfor %}
+        // move the media's viewport
         $(window).on('mousemove', move);
-        // calculate the aspect ratio of the media and scale it by the longest side
         function move(e) {
+            var x = e.pageX + 5;
+            var y = e.pageY + 15;
             // position it relative to the cursor
             {% for post in posts if post.media_type == "video" or post.media_type == "image" or post.media_type == "gif" %}
-                TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                    css: {
-                        left: e.pageX + 5,
-                        top: e.pageY + 15
-                    }
-                });
+                TweenLite.to(viewport_{{posts.index(post)}}, 0, {x:x,y:y});
             {% endfor %}
         }
     </script>
