@@ -10,3 +10,6 @@ __pycache__
 *.lock
 *.toml
 *.html
+*.part
+*.ytdl
+*.gif

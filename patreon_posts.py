@@ -32,15 +32,17 @@ class post:
     image = ""
     vid = ""
     media_type = ""
+    icon = ""
     tags = []
 
-    def __init__(self, title, slug, url, image, vid, media_type, tags):
+    def __init__(self, title, slug, url, image, vid, media_type, icon, tags):
         self.title = title
         self.slug = slug
         self.url = url
         self.image = image
         self.vid = vid
         self.media_type = media_type
+        self.icon = icon
         self.tags = tags
 
 
@@ -73,6 +75,7 @@ def main():
 
     if get_media:
         download_media(pickle_filename)
+        process_media()
 
     if set_pages:
         generate_pages(pickle_filename)
@@ -207,7 +210,8 @@ def extract_posts(source, title_class, tag_class):
         url = str(title_iterator.find("a")["href"])
         image = ""
         vid = ""
-        media_type = "text"
+        media_type = "unknown"
+        icon = "text"
         tags = []
         if title not in (post.title for post in posts):
             for tag in title_iterator.parent.parent.parent.findAll(
@@ -222,17 +226,30 @@ def extract_posts(source, title_class, tag_class):
                 if "gif" in str(
                     requests.head(image, allow_redirects=True).headers["Content-Type"]
                 ):
-                    media_type = "gif"
+                    icon = "gif"
+                    media_type = "video"
                 else:
+                    icon = "image"
                     media_type = "image"
             if video_iframe:
                 vid = str(get_vid(video_iframe["src"]))
+                icon = "video"
                 media_type = "video"
-            if vid and "Premium video post" in tags:
+            if (
+                icon == "video"
+                and "speed video" not in tags
+                or "Premium video post" in tags
+                or "video montage" in tags
+            ):
                 media_type = "image"
-            if media_type == "video" and not vid:
+            if icon == "video" and not vid:
+                icon = "image"
+            if (media_type == "video" or media_type == "image") and not (vid or image):
+                icon = "unknown"
                 media_type = "unknown"
-            posts.append(post(title, slugify(title), url, image, vid, media_type, tags))
+            posts.append(
+                post(title, slugify(title), url, image, vid, media_type, icon, tags)
+            )
     return posts
 
 
@@ -270,15 +287,18 @@ def get_vid(url):
 
 
 # use yt-dlp, ffmpeg and pillow to download all non-GIF media referenced by the collected metadata
-# and process it by scaling and trimming as desired
+
+
 def download_media(pickle_filename):
     if exists(pickle_filename):
         with open(pickle_filename, "rb") as file:
             posts = pickle.load(file)
         for post in posts:
-            print("post.vid: " + post.vid)
-            print("post.media_type: " + post.media_type)
-            if post.vid:
+            print("title: " + post.title)
+            print("vid: " + post.vid)
+            print("icon: " + post.icon)
+            print("media_type: " + post.media_type)
+            if post.icon == "video":
                 if post.media_type == "video":
                     ydl_opts = {
                         "retries": 100,
@@ -305,32 +325,19 @@ def download_media(pickle_filename):
                         ydl.download(yt_url)
                     filename = post.slug + ".jpg"
                     os.rename(post.vid + ".webp", filename)
-            elif post.media_type == "image":
+            elif post.icon == "image":
                 image = requests.get(post.image)
                 with open(post.slug + ".jpg", "wb") as f:
                     f.write(image.content)
-        images = [file for file in os.listdir() if file.endswith(("jpg"))]
-        for image in images:
-            img = Image.open(image).convert("RGB")
-            img.thumbnail((300, 300))
-            img.save(image, optimize=True, quality=85)
-        videos = [file for file in os.listdir() if file.endswith(("webm"))]
-        for video in videos:
-            ffmpeg.input(video).output(
-                video + ".webm",
-                ss=("00:00:06"),
-                to=("00:00:10"),
-                vcodec="libvpx-vp9",
-                crf=25,
-            ).run()
-        for path in Path(".").glob("*.webm.webm"):
-            path.rename(path.with_name(path.stem.partition(".webm")[0] + path.suffix))
-
+            elif post.icon == "gif":
+                gif = requests.get(post.image)
+                with open(post.slug + ".gif", "wb") as f:
+                    f.write(gif.content)
     else:
         print(pickle_filename + " missing! Cannot download media.")
 
 
-# choose only vp9 webms at least 240p for yt-dlp format selection
+# choose only vp9 webms at least 360p for yt-dlp format selection
 def format_selector(ctx):
     """Select the best video and the best audio that won't result in an mkv.
     NOTE: This is just an example and does not handle all cases"""
@@ -344,27 +351,52 @@ def format_selector(ctx):
         for f in formats
         if f["vcodec"] == "vp9"
         and f["acodec"] == "none"
-        and f["height"] >= 240
+        and f["height"] >= 360
         and f["ext"] == "webm"
-    )
-
-    # find compatible audio extension
-    audio_ext = {"webm": "webm"}[best_video["ext"]]
-    # vcodec='none' means there is no video
-    best_audio = next(
-        f
-        for f in formats
-        if (f["acodec"] != "none" and f["vcodec"] == "none" and f["ext"] == audio_ext)
     )
 
     # These are the minimum required fields for a merged format
     yield {
-        "format_id": f'{best_video["format_id"]}+{best_audio["format_id"]}',
+        "format_id": f'{best_video["format_id"]}',
         "ext": best_video["ext"],
-        "requested_formats": [best_video, best_audio],
+        "requested_formats": [best_video],
         # Must be + separated list of protocols
-        "protocol": f'{best_video["protocol"]}+{best_audio["protocol"]}',
+        "protocol": f'{best_video["protocol"]}',
     }
+
+
+# process the media by reencoding, scaling and trimming as desired
+def process_media():
+    images = [file for file in os.listdir() if file.endswith(("jpg"))]
+    gifs = [file for file in os.listdir() if file.endswith(("gif"))]
+    videos = [file for file in os.listdir() if file.endswith(("webm"))]
+    for gif in gifs:
+        ffmpeg.input(gif).filter("scale", -1, 300).output(
+            gif + ".webm",
+            ss=("00:00:00"),
+            to=("00:00:04"),
+            vcodec="libvpx-vp9",
+            pix_fmt="yuv420p",
+            movflags="faststart",
+            crf=35,
+        ).run()
+    for image in images:
+        img = Image.open(image).convert("RGB")
+        img.thumbnail((300, 300))
+        img.save(image, optimize=True, quality=85)
+    for video in videos:
+        ffmpeg.input(video).filter("scale", -1, 300).output(
+            video + ".webm",
+            ss=("00:00:06"),
+            to=("00:00:10"),
+            vcodec="libvpx-vp9",
+            movflags="faststart",
+            crf=35,
+        ).run()
+    for path in Path(".").glob("*.gif.webm"):
+        path.rename(path.with_name(path.stem.partition(".gif")[0] + path.suffix))
+    for path in Path(".").glob("*.webm.webm"):
+        path.rename(path.with_name(path.stem.partition(".webm")[0] + path.suffix))
 
 
 # deterministically convert strings into readable equivalents that are filename-friendly
@@ -422,6 +454,12 @@ def generate_pages(pickle_filename):
     else:
         print(pickle_filename + " missing! Cannot generate posts.")
         return
+
+    for post in posts:
+        print("title: " + post.title)
+        print("vid: " + post.vid)
+        print("icon: " + post.icon)
+        print("media_type: " + post.media_type)
 
     # generate all the pages needed for the index site
     generate_page(posts, "ALL")

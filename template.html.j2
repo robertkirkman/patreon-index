@@ -17,10 +17,6 @@
                     Your browser does not support HTML5 video.
                 </video>
             </div>
-        {% elif post.media_type == "gif" %}
-            <div class="viewport_{{posts.index(post)}}">
-                <img id="img_{{posts.index(post)}}" class="fade" src="{{post.image}}" alt="image not found">
-            </div>
         {% elif post.media_type == "image" %}
             <div class="viewport_{{posts.index(post)}}">
                 <img id="img_{{posts.index(post)}}" class="fade" src="{{post.slug}}.jpg" alt="image not found">
@@ -95,7 +91,7 @@
     <div class="posts">
         <!-- python jinja2 iterates every tag to create a long list of links -->
         {% for post in posts %}
-            <img class="media_type" src="{{post.media_type}}.png" alt="image not found">
+            <img class="icon" src="{{post.icon}}.png" alt="image not found">
             <a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
         {% endfor %}
     </div>
@@ -104,19 +100,26 @@
     <script>
         // python jinja2 iterates this entire block to generate this code for every post in the whole page
         {% for post in posts %}
-            // for videos, play and pause are needed
-            {% if post.media_type == "video" %}
+            {% if post.media_type == "video" or post.media_type == "image" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
-                var video_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
-                var aspect_ratio = video_{{posts.index(post)}}.videoWidth / video_{{posts.index(post)}}.videoHeight;
-                var landscape = video_{{posts.index(post)}}.videoWidth > video_{{posts.index(post)}}.videoHeight;
-                if (landscape) {
+                // for videos, muting is necessary because autoplaying videos with audio are not allowed
+                {% if post.media_type == "video" %}
+                    var media_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
+                    media_{{posts.index(post)}}.muted = true;
+                    var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth / media_{{posts.index(post)}}.videoHeight;
+                    var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth > media_{{posts.index(post)}}.videoHeight;
+                {% elif post.media_type == "image" %}
+                    var media_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
+                    var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth / media_{{posts.index(post)}}.naturalHeight;
+                    var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth > media_{{posts.index(post)}}.naturalHeight;
+                {% endif %}
+                if (landscape_{{posts.index(post)}}) {
                     TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
                             width: 300,
-                            'aspect-ratio': aspect_ratio
+                            'aspect-ratio': aspect_ratio_{{posts.index(post)}}
                         }
                     });
                 } else {
@@ -124,66 +127,25 @@
                     TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
                             height: 300,
-                            'aspect-ratio': aspect_ratio
+                            'aspect-ratio': aspect_ratio_{{posts.index(post)}}
                         }
                     });
                 }
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { playVideo_{{posts.index(post)}}(1) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { playVideo_{{posts.index(post)}}(0) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseover', function() { show_{{posts.index(post)}}(1) }, false);
+                post_{{posts.index(post)}}.addEventListener('mouseout', function() { show_{{posts.index(post)}}(0) }, false);
                 
-                // play the video with audio, but if the browser blocks it, play the video without audio
-                async function playVideo_{{posts.index(post)}}(opacity) {
-                    if (opacity) {
-                        try {
-                            video_{{posts.index(post)}}.muted = false;
-                            await video_{{posts.index(post)}}.play();
-                        } catch(err) {
-                            video_{{posts.index(post)}}.muted = true;
-                            video_{{posts.index(post)}}.play();
+                // play the video without audio
+                function show_{{posts.index(post)}}(opacity) {
+                    {% if post.media_type == "video" %}
+                        if (opacity) {
+                            media_{{posts.index(post)}}.play();
+                        } else {
+                            media_{{posts.index(post)}}.pause();
                         }
-                    } else {
-                        video_{{posts.index(post)}}.pause();
-                    }
-                    // change the opacity whenever the video playing status changes
+                    {% endif %}
+                    // change the opacity whenever the show status changes
                     TweenLite.set(".fade", {"opacity":0})
-                    TweenLite.to(video_{{posts.index(post)}}, 0, {
-                        css: {
-                            opacity: opacity
-                        }
-                    });
-                }
-
-            // for non-videos, play and pause are not used, only opacity
-            {% elif post.media_type == "image" or post.media_type == "gif" %}
-                var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
-                var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
-                var img_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
-                var aspect_ratio = img_{{posts.index(post)}}.naturalWidth / img_{{posts.index(post)}}.naturalHeight;
-                var landscape = img_{{posts.index(post)}}.naturalWidth > img_{{posts.index(post)}}.naturalHeight;
-                if (landscape) {
-                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
-                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                        css: {
-                            width: 300,
-                            'aspect-ratio': aspect_ratio
-                        }
-                    });
-                } else {
-                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
-                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                        css: {
-                            height: 300,
-                            'aspect-ratio': aspect_ratio
-                        }
-                    });
-                }
-                post_{{posts.index(post)}}.addEventListener('mouseover', function() { showImage_{{posts.index(post)}}(1) }, false);
-                post_{{posts.index(post)}}.addEventListener('mouseout', function() { showImage_{{posts.index(post)}}(0) }, false);
-                              
-                // set the opacity of the media as appropriate
-                async function showImage_{{posts.index(post)}}(opacity) {
-                    TweenLite.set(".fade", {"opacity":0})
-                    TweenLite.to(img_{{posts.index(post)}}, 0, {
+                    TweenLite.to(media_{{posts.index(post)}}, 0, {
                         css: {
                             opacity: opacity
                         }
@@ -194,11 +156,9 @@
         // move the media's viewport
         $(window).on('mousemove', move);
         function move(e) {
-            var x = e.pageX + 5;
-            var y = e.pageY + 15;
             // position it relative to the cursor
-            {% for post in posts if post.media_type == "video" or post.media_type == "image" or post.media_type == "gif" %}
-                TweenLite.to(viewport_{{posts.index(post)}}, 0, {x:x,y:y});
+            {% for post in posts if post.media_type == "video" or post.media_type == "image" %}
+                TweenLite.to(viewport_{{posts.index(post)}}, 0, {x:e.pageX + 5,y:e.pageY + 15});
             {% endfor %}
         }
     </script>
