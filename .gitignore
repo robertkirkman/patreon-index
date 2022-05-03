@@ -1,12 +1,11 @@
+profile
+__pycache__
 *.log
 *.pickle
 *.webm
 *.webp
 *.jpg
-profile
-__pycache__
 *.txt
-[A-Z]*.html
 *.lock
 *.toml
 *.html

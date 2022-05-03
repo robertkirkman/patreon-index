@@ -13,17 +13,20 @@ cd ~/patreon
 #./patreon_posts.py --sync-pages
 
 # test 
-cp patreon.html.j2 patreon.html
-scp -- *.html tacokoneko@192.168.120.77:/var/www/html
-scp -- *.css tacokoneko@192.168.120.77:/var/www/html
-scp -- *.png tacokoneko@192.168.120.77:/var/www/html
-scp -- *.webm tacokoneko@192.168.120.77:/var/www/html
-scp -- *.jpg tacokoneko@192.168.120.77:/var/www/html
+#cp patreon.html.j2 patreon.html
+#scp -- *.html tacokoneko@192.168.120.77:/var/www/html
+#scp -- *.css tacokoneko@192.168.120.77:/var/www/html
+#scp -- *.png tacokoneko@192.168.120.77:/var/www/html
+#scp -- *.webm tacokoneko@192.168.120.77:/var/www/html
+#scp -- *.jpg tacokoneko@192.168.120.77:/var/www/html
+#scp -- favicon.ico tacokoneko@192.168.120.77:/var/www/html
 
 # prod
+#cp patreon.html.j2 patreon.html
 #cp -- *.html /var/www/html
 #cp -- *.css /var/www/html
 #cp -- *.png /var/www/html
 #cp -- *.webm /var/www/html
 #cp -- *.jpg /var/www/html
+#cp -- favicon.ico /var/www/html
 #mate-session-save --force-logout

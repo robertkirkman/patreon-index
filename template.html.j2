@@ -98,7 +98,6 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
     <script>
-        // python jinja2 iterates this entire block to generate this code for every post in the whole page
         {% for post in posts %}
             {% if post.media_type == "video" or post.media_type == "image" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
@@ -107,49 +106,49 @@
                 {% if post.media_type == "video" %}
                     var media_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
                     media_{{posts.index(post)}}.muted = true;
-                    var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth / media_{{posts.index(post)}}.videoHeight;
-                    var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth > media_{{posts.index(post)}}.videoHeight;
                 {% elif post.media_type == "image" %}
                     var media_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
-                    var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth / media_{{posts.index(post)}}.naturalHeight;
-                    var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth > media_{{posts.index(post)}}.naturalHeight;
                 {% endif %}
-                if (landscape_{{posts.index(post)}}) {
-                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"height"})
-                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                        css: {
-                            width: 300,
-                            'aspect-ratio': aspect_ratio_{{posts.index(post)}}
-                        }
-                    });
-                } else {
-                    TweenLite.set(".viewport_{{posts.index(post)}}", {clearProps:"width"})
-                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
-                        css: {
-                            height: 300,
-                            'aspect-ratio': aspect_ratio_{{posts.index(post)}}
-                        }
-                    });
-                }
                 post_{{posts.index(post)}}.addEventListener('mouseover', function() { show_{{posts.index(post)}}(1) }, false);
                 post_{{posts.index(post)}}.addEventListener('mouseout', function() { show_{{posts.index(post)}}(0) }, false);
                 
                 // play the video without audio
                 function show_{{posts.index(post)}}(opacity) {
                     {% if post.media_type == "video" %}
+                        var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth / media_{{posts.index(post)}}.videoHeight;
+                        var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth > media_{{posts.index(post)}}.videoHeight;
                         if (opacity) {
                             media_{{posts.index(post)}}.play();
                         } else {
                             media_{{posts.index(post)}}.pause();
                         }
+                    {% elif post.media_type == "image" %}
+                        var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth / media_{{posts.index(post)}}.naturalHeight;
+                        var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth > media_{{posts.index(post)}}.naturalHeight;
                     {% endif %}
-                    // change the opacity whenever the show status changes
-                    TweenLite.set(".fade", {"opacity":0})
-                    TweenLite.to(media_{{posts.index(post)}}, 0, {
+                    // change the opacity whenever the show status changes 
+                    TweenLite.to(viewport_{{posts.index(post)}}, 0, {
                         css: {
                             opacity: opacity
                         }
                     });
+                    if (landscape_{{posts.index(post)}}) {
+                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {clearProps:"height"})
+                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+                            css: {
+                                width: 300,
+                                'aspect-ratio': aspect_ratio_{{posts.index(post)}}
+                            }
+                        });
+                    } else {
+                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {clearProps:"width"})
+                        TweenLite.to(viewport_{{posts.index(post)}}, 0, {
+                            css: {
+                                height: 300,
+                                'aspect-ratio': aspect_ratio_{{posts.index(post)}}
+                            }
+                        });
+                    }
                 }
             {% endif %}
         {% endfor %}
@@ -162,6 +161,6 @@
             {% endfor %}
         }
     </script>
-</body>
 
+</body>
 </html>

@@ -235,9 +235,8 @@ def extract_posts(source, title_class, tag_class):
                 vid = str(get_vid(video_iframe["src"]))
                 icon = "video"
                 media_type = "video"
-            if (
-                icon == "video"
-                and "speed video" not in tags
+            if icon == "video" and (
+                "speed video" not in tags
                 or "Premium video post" in tags
                 or "video montage" in tags
             ):
@@ -373,8 +372,8 @@ def process_media():
     for gif in gifs:
         ffmpeg.input(gif).filter("scale", -1, 300).output(
             gif + ".webm",
-            ss=("00:00:00"),
-            to=("00:00:04"),
+            ss=("00:00:01"),
+            to=("00:00:05"),
             vcodec="libvpx-vp9",
             pix_fmt="yuv420p",
             movflags="faststart",

@@ -191,20 +191,21 @@ li>a:only-child:after {
 }
 
 [class*="viewport"] {
+	transition: opacity .1s ease-in-out;
 	position: absolute;
 	top: 0px;
 	left: 0px;
+	opacity: 0;
 }
 
 .fade {
-	transition: opacity .1s ease-in-out;
 	height: 100%;
 	width: 100%;
 	border-radius: 15px;
 	position: absolute;
 	top: 0px;
 	left: 0px;
-	opacity: 0;
+	opacity: 1;
 }
 
 /* Display Dropdown when clicked on Parent Label */
