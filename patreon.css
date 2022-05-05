@@ -350,3 +350,12 @@ br {
 	position: relative;
 	top: 5px;
 }
+
+.footer {
+	position: relative;
+	height: 320px;
+}
+
+.homepage {
+	line-height: 25px;
+}

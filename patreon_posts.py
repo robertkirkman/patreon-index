@@ -86,7 +86,8 @@ def main():
 def sync_posts(pickle_filename, get_videos=False, page_count=0):
     source_filename = "profile.txt"
     title_class = "sc-1di2uql-1 wkoTA"
-    tag_class = "sc-jrQzAO WqDYW"
+    old_tag_class = "sc-jrQzAO WqDYW"
+    tag_class = "sc-bdvvtL gNKGXx"
 
     source = download_source(title_class, get_videos, page_count)
     with open(source_filename, "w") as file:
@@ -246,6 +247,8 @@ def extract_posts(source, title_class, tag_class):
             if (media_type == "video" or media_type == "image") and not (vid or image):
                 icon = "unknown"
                 media_type = "unknown"
+            if "speed video" in tags:
+                icon = "speedvideo"
             posts.append(
                 post(title, slugify(title), url, image, vid, media_type, icon, tags)
             )
@@ -297,7 +300,7 @@ def download_media(pickle_filename):
             print("vid: " + post.vid)
             print("icon: " + post.icon)
             print("media_type: " + post.media_type)
-            if post.icon == "video":
+            if post.icon == "video" or post.icon == "speedvideo":
                 if post.media_type == "video":
                     ydl_opts = {
                         "retries": 100,
@@ -372,13 +375,13 @@ def process_media():
     for gif in gifs:
         ffmpeg.input(gif).filter("scale", -1, 300).output(
             gif + ".webm",
-            ss=("00:00:01"),
-            to=("00:00:05"),
+            ss=("00:00:02"),
+            to=("00:00:06"),
             vcodec="libvpx-vp9",
             pix_fmt="yuv420p",
             movflags="faststart",
             crf=35,
-        ).run()
+        ).overwrite_output().run()
     for image in images:
         img = Image.open(image).convert("RGB")
         img.thumbnail((300, 300))
@@ -391,7 +394,7 @@ def process_media():
             vcodec="libvpx-vp9",
             movflags="faststart",
             crf=35,
-        ).run()
+        ).overwrite_output().run()
     for path in Path(".").glob("*.gif.webm"):
         path.rename(path.with_name(path.stem.partition(".gif")[0] + path.suffix))
     for path in Path(".").glob("*.webm.webm"):
@@ -427,24 +430,33 @@ def generate_pages(pickle_filename):
     # tags chosen by the client for a series of manually-chosen categories
     premium = ["Premium video post"]
     vos = ["VOS day"]
-    paint_alongs = ["Paint-Along"]
-    animals = ["animals"]
-    portraits = ["portrait"]
-    landscapes = ["landscape"]
+    paint_along = ["Paint-Along"]
+    animal = ["animals"]
+    portrait = ["portrait"]
+    landscape = ["landscape"]
     pasteling = ["pastel"]
     underpainting = ["underpainting"]
-    progress_pics = ["progress pics"]
-    speed_videos = ["speed video"]
-    video_montages = ["video montage"]
-    art_tips = ["art tips"]
+    progress_pic = ["progress pics"]
+    speed_video = ["speed video"]
+    video_montage = ["video montage"]
+    art_tip = ["art tips"]
     conversation = ["conversation"]
     problem_solving = ["problem solving"]
     bonus_full_length_videos = ["Free Full-Length Videos"]
     cow = ["cows"]
+    bunny = ["bunny"]
     sheep = ["sheep"]
     bird = ["bird"]
     wildlife = ["wildlife"]
     pet_portrait = ["pet portrait"]
+    drawing = ["drawing"]
+    goat = ["goat"]
+    deer = ["deer"]
+    donkey = ["donkey"]
+    horse = ["horse"]
+    still_life = ["still life"]
+    no_subject = ["nada subject"]
+    inspiration = ["Inspiration"]
 
     # deserialize the previously-stored list of posts from pickle file
     if exists(pickle_filename):
@@ -459,60 +471,84 @@ def generate_pages(pickle_filename):
         print("vid: " + post.vid)
         print("icon: " + post.icon)
         print("media_type: " + post.media_type)
+        print("tags: ")
+        print(post.tags)
 
     # generate all the pages needed for the index site
     generate_page(posts, "ALL")
 
-    generate_page(posts, "ALL VOS EPISODE", premium + vos, sort=vos_sort)
-    generate_page(posts, "VOS PAINT-ALONG", premium + vos + paint_alongs, sort=vos_sort)
-    generate_page(posts, "VOS ANIMAL", premium + vos + animals, sort=vos_sort)
-    generate_page(posts, "VOS PORTRAIT", premium + vos + portraits, sort=vos_sort)
-    generate_page(posts, "VOS LANDSCAPE", premium + vos + landscapes, sort=vos_sort)
-    generate_page(posts, "VOS PASTELING", premium + vos + pasteling, sort=vos_sort)
-    generate_page(
-        posts, "VOS UNDERPAINTING", premium + vos + underpainting, sort=vos_sort
-    )
+    generate_page(posts, "ALL VOS EPISODE", vos, sort=vos_sort)
+    generate_page(posts, "VOS PAINT-ALONG", vos + paint_along, sort=vos_sort)
+    generate_page(posts, "VOS ANIMAL", vos + animal, sort=vos_sort)
+    generate_page(posts, "VOS PORTRAIT", vos + portrait, sort=vos_sort)
+    generate_page(posts, "VOS LANDSCAPE", vos + landscape, sort=vos_sort)
+    generate_page(posts, "VOS PASTELING", vos + pasteling, sort=vos_sort)
+    generate_page(posts, "VOS UNDERPAINTING", vos + underpainting, sort=vos_sort)
     generate_page(
         posts,
         "OTHER VOS EPISODE",
-        premium + vos,
-        paint_alongs + animals + portraits + landscapes + pasteling + underpainting,
+        vos,
+        paint_along + animal + portrait + landscape + pasteling + underpainting,
         vos_sort,
     )
     generate_page(posts, "OTHER PREMIUM", premium, vos)
 
     generate_page(posts, "ALL PUBLIC", without_tags=premium)
 
-    generate_page(posts, "PROGRESS PIC", progress_pics, premium)
-    generate_page(posts, "SPEED VIDEO", speed_videos, premium)
-    generate_page(posts, "VIDEO MONTAGE", video_montages, premium)
-    generate_page(posts, "ART TIP", art_tips, premium)
-    generate_page(posts, "CONVERSATION", conversation, premium)
-    generate_page(posts, "PROBLEM SOLVING", problem_solving, premium)
+    generate_page(posts, "ART TIP", art_tip, premium)
     generate_page(posts, "BONUS FULL-LENGTH VIDEO", bonus_full_length_videos, premium)
+    generate_page(posts, "CONVERSATION", conversation, premium)
+    generate_page(posts, "INSPIRATION", inspiration, premium)
+    generate_page(posts, "PROBLEM SOLVING", problem_solving, premium)
+    generate_page(posts, "PROGRESS PIC", progress_pic, premium)
+    generate_page(posts, "SPEED VIDEO", speed_video, premium)
+    generate_page(posts, "VIDEO MONTAGE", video_montage, premium)
     generate_page(
         posts,
         "OTHER PUBLIC",
         without_tags=premium
-        + progress_pics
-        + speed_videos
-        + video_montages
-        + art_tips
+        + progress_pic
+        + speed_video
+        + video_montage
+        + art_tip
         + conversation
+        + inspiration
         + problem_solving
         + bonus_full_length_videos,
     )
 
-    generate_page(posts, "PORTRAIT", portraits)
-    generate_page(posts, "COW", cow)
-    generate_page(posts, "SHEEP", sheep)
-    generate_page(posts, "BIRD", bird)
-    generate_page(posts, "WILDLIFE", wildlife)
-    generate_page(posts, "PET PORTRAIT", pet_portrait)
+    generate_page(posts, "BIRD", bird, no_subject)
+    generate_page(posts, "BUNNY", bunny, no_subject)
+    generate_page(posts, "COW", cow, no_subject)
+    generate_page(posts, "DEER", deer, no_subject)
+    generate_page(posts, "DONKEY", donkey, no_subject)
+    generate_page(posts, "DRAWING", drawing, no_subject)
+    generate_page(posts, "GOAT", goat, no_subject)
+    generate_page(posts, "HORSE", horse, no_subject)
+    generate_page(posts, "LANDSCAPE", landscape, no_subject)
+    generate_page(posts, "PET PORTRAIT", pet_portrait, no_subject)
+    generate_page(posts, "HUMAN PORTRAIT", portrait, no_subject)
+    generate_page(posts, "SHEEP", sheep, no_subject)
+    generate_page(posts, "STILL LIFE", still_life, no_subject)
+    generate_page(posts, "WILDLIFE", wildlife, no_subject)
     generate_page(
         posts,
-        "OTHER",
-        without_tags=portraits + cow + sheep + bird + wildlife + pet_portrait,
+        "OTHER SUBJECT",
+        without_tags=bird
+        + bunny
+        + cow
+        + deer
+        + donkey
+        + drawing
+        + goat
+        + horse
+        + landscape
+        + pet_portrait
+        + portrait
+        + sheep
+        + still_life
+        + wildlife
+        + no_subject,
     )
 
     generate_tag_pages(posts)
