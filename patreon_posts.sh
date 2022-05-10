@@ -4,7 +4,7 @@
 #mode=$(xrandr | grep 464 | cut -d'(' -f2- | sed 's/).*//' | grep 0x)
 #xrandr --addmode eDP $mode
 #xrandr --output eDP --mode $mode
-cd ~/patreon
+cd ~/patreon-index
 
 #invocations
 ./patreon_posts.py --download-posts --download-media --process-media --generate-site
