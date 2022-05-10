@@ -10,16 +10,16 @@
 <body>
     <!-- including divs to contain every thumbnail media embed -->
     {% for post in posts %}
-        {% if post.media_type == "video" %}
+        {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" %}
             <div class="viewport_{{posts.index(post)}}">
                 <video id="video_{{posts.index(post)}}" class="fade" loop>
-                    <source src="{{post.slug}}.webm" type="video/webm">
+                    <source src="{{post["data"]["attributes"]["title_slug"]}}.webm" type="video/webm">
                     Your browser does not support HTML5 video.
                 </video>
             </div>
-        {% elif post.media_type == "image" %}
+        {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
             <div class="viewport_{{posts.index(post)}}">
-                <img id="img_{{posts.index(post)}}" class="fade" src="{{post.slug}}.jpg" alt="image not found">
+                <img id="img_{{posts.index(post)}}" class="fade" src="{{post["data"]["attributes"]["title_slug"]}}.jpg" alt="image not found">
             </div>
         {% endif %}
     {% endfor %}
@@ -100,8 +100,8 @@
     <div class="posts">
         <!-- python jinja2 iterates every tag to create a long list of links -->
         {% for post in posts %}
-            <img class="icon" src="{{post.icon}}.png" alt="image not found">
-            <a target="_blank" class="post_{{posts.index(post)}}" href="{{post.url}}">{{post.title}}</a><br>
+            <img class="icon" src="{{post["data"]["attributes"]["icon_type"]}}.png" alt="image not found">
+            <a target="_blank" class="post_{{posts.index(post)}}" href="{{post["data"]["attributes"]["url"]}}">{{post["data"]["attributes"]["title"]}}</a><br>
         {% endfor %}
         <div class="footer"></div>
     </div>
@@ -109,14 +109,14 @@
     <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
     <script>
         {% for post in posts %}
-            {% if post.media_type == "video" or post.media_type == "image" %}
+            {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 // for videos, muting is necessary because autoplaying videos with audio are not allowed
-                {% if post.media_type == "video" %}
+                {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" %}
                     var media_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
                     media_{{posts.index(post)}}.muted = true;
-                {% elif post.media_type == "image" %}
+                {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
                     var media_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
                 {% endif %}
                 post_{{posts.index(post)}}.addEventListener('mouseover', function() { show_{{posts.index(post)}}(1) }, false);
@@ -124,7 +124,7 @@
                 
                 // play the video without audio
                 function show_{{posts.index(post)}}(opacity) {
-                    {% if post.media_type == "video" %}
+                    {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" %}
                         var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth / media_{{posts.index(post)}}.videoHeight;
                         var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.videoWidth > media_{{posts.index(post)}}.videoHeight;
                         if (opacity) {
@@ -132,7 +132,7 @@
                         } else {
                             media_{{posts.index(post)}}.pause();
                         }
-                    {% elif post.media_type == "image" %}
+                    {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
                         var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth / media_{{posts.index(post)}}.naturalHeight;
                         var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth > media_{{posts.index(post)}}.naturalHeight;
                     {% endif %}
@@ -166,7 +166,7 @@
         $(window).on('mousemove', move);
         function move(e) {
             // position it relative to the cursor
-            {% for post in posts if post.media_type == "video" or post.media_type == "image" %}
+            {% for post in posts if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
                 TweenLite.to(viewport_{{posts.index(post)}}, 0, {x:e.pageX + 5,y:e.pageY + 15});
             {% endfor %}
         }
