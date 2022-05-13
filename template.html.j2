@@ -13,13 +13,13 @@
         {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" %}
             <div class="viewport_{{posts.index(post)}}">
                 <video id="video_{{posts.index(post)}}" class="fade" loop>
-                    <source src="{{post["data"]["attributes"]["title_slug"]}}.webm" type="video/webm">
+                    <source src="{{post["data"]["attributes"]["title_slug"]}}_processed.webm" type="video/webm">
                     Your browser does not support HTML5 video.
                 </video>
             </div>
-        {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
+        {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
             <div class="viewport_{{posts.index(post)}}">
-                <img id="img_{{posts.index(post)}}" class="fade" src="{{post["data"]["attributes"]["title_slug"]}}.jpg" alt="image not found">
+                <img id="img_{{posts.index(post)}}" class="fade" src="{{post["data"]["attributes"]["title_slug"]}}_processed.jpg" alt="image not found">
             </div>
         {% endif %}
     {% endfor %}
@@ -109,14 +109,14 @@
     <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
     <script>
         {% for post in posts %}
-            {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
+            {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
                 var viewport_{{posts.index(post)}} = document.getElementsByClassName('viewport_{{posts.index(post)}}')[0];
                 var post_{{posts.index(post)}} = document.getElementsByClassName('post_{{posts.index(post)}}')[0];
                 // for videos, muting is necessary because autoplaying videos with audio are not allowed
                 {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" %}
                     var media_{{posts.index(post)}} = document.getElementById('video_{{posts.index(post)}}');
                     media_{{posts.index(post)}}.muted = true;
-                {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
+                {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
                     var media_{{posts.index(post)}} = document.getElementById('img_{{posts.index(post)}}');
                 {% endif %}
                 post_{{posts.index(post)}}.addEventListener('mouseover', function() { show_{{posts.index(post)}}(1) }, false);
@@ -132,7 +132,7 @@
                         } else {
                             media_{{posts.index(post)}}.pause();
                         }
-                    {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
+                    {% elif post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
                         var aspect_ratio_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth / media_{{posts.index(post)}}.naturalHeight;
                         var landscape_{{posts.index(post)}} = media_{{posts.index(post)}}.naturalWidth > media_{{posts.index(post)}}.naturalHeight;
                     {% endif %}
@@ -166,7 +166,7 @@
         $(window).on('mousemove', move);
         function move(e) {
             // position it relative to the cursor
-            {% for post in posts if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" %}
+            {% for post in posts if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
                 TweenLite.to(viewport_{{posts.index(post)}}, 0, {x:e.pageX + 5,y:e.pageY + 15});
             {% endfor %}
         }

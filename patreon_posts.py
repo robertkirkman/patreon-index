@@ -73,6 +73,8 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
                 requests.head(image_url, allow_redirects=True).headers["Content-Type"]
             ):
                 icon = "gif"
+            elif post_type == "link":
+                icon = "link"
             else:
                 icon = "image"
         elif post_type == "video_embed":
@@ -111,30 +113,34 @@ def download_media(posts_pickle_filename):
             yt_url = post["data"]["attributes"]["embed"]["url"]
             vid = get_vid(yt_url)
             if icon_type == "speedvideo":
-                ydl_opts = {
-                    "retries": 100,
-                    "ignoreerrors": True,
-                    "outtmpl": "%(id)s",
-                    "format": format_selector,
-                }
-                with YoutubeDL(ydl_opts) as ydl:
-                    ydl.download(yt_url)
                 filename = post_slug + ".webm"
-                os.rename(vid + ".webm", filename)
+                while not exists(filename):
+                    ydl_opts = {
+                        "retries": 100,
+                        "ignoreerrors": True,
+                        "outtmpl": "%(id)s",
+                        "format": format_selector,
+                    }
+                    with YoutubeDL(ydl_opts) as ydl:
+                        ydl.download(yt_url)
+                    if exists(vid + ".webm"):
+                        os.rename(vid + ".webm", filename)
             else:
-                ydl_opts = {
-                    "retries": 100,
-                    "ignoreerrors": True,
-                    "writethumbnail": True,
-                    "skip_download": True,
-                    "outtmpl": "%(id)s",
-                    "format": format_selector,
-                }
-                with YoutubeDL(ydl_opts) as ydl:
-                    ydl.download(yt_url)
                 filename = post_slug + ".jpg"
-                os.rename(vid + ".webp", filename)
-        elif icon_type == "image" or icon_type == "gif":
+                while not exists(filename):
+                    ydl_opts = {
+                        "retries": 100,
+                        "ignoreerrors": True,
+                        "writethumbnail": True,
+                        "skip_download": True,
+                        "outtmpl": "%(id)s",
+                        "format": format_selector,
+                    }
+                    with YoutubeDL(ydl_opts) as ydl:
+                        ydl.download(yt_url)
+                    if exists(vid + ".webp"):
+                        os.rename(vid + ".webp", filename)
+        elif icon_type == "image" or icon_type == "gif" or icon_type == "link":
             image_url = post["data"]["attributes"]["image"]["url"]
             image = requests.get(image_url)
             if icon_type == "gif":
@@ -147,12 +153,16 @@ def download_media(posts_pickle_filename):
 
 # process the media by reencoding, scaling and trimming as desired
 def process_media():
-    images = [file for file in os.listdir() if file.endswith(("jpg"))]
+    images = [file for file in os.listdir() if file.endswith(("jpg")) and "processed" not in file]
     gifs = [file for file in os.listdir() if file.endswith(("gif"))]
-    videos = [file for file in os.listdir() if file.endswith(("webm"))]
+    videos = [file for file in os.listdir() if file.endswith(("webm")) and "processed" not in file]
+    for image in images:
+        img = Image.open(image).convert("RGB")
+        img.thumbnail((300, 300))
+        img.save(image.split('.')[0] + "_processed.jpg", optimize=True, quality=85)
     for gif in gifs:
         ffmpeg.input(gif).filter("scale", -1, 300).output(
-            gif + ".webm",
+            gif.split('.')[0] + "_processed.webm",
             ss=("00:00:02"),
             to=("00:00:06"),
             vcodec="libvpx-vp9",
@@ -160,23 +170,15 @@ def process_media():
             movflags="faststart",
             crf=35,
         ).overwrite_output().run()
-    for image in images:
-        img = Image.open(image).convert("RGB")
-        img.thumbnail((300, 300))
-        img.save(image, optimize=True, quality=85)
     for video in videos:
         ffmpeg.input(video).filter("scale", -1, 300).output(
-            video + ".webm",
+            video.split('.')[0] + "_processed.webm",
             ss=("00:00:06"),
             to=("00:00:10"),
             vcodec="libvpx-vp9",
             movflags="faststart",
             crf=35,
         ).overwrite_output().run()
-    for path in Path(".").glob("*.gif.webm"):
-        path.rename(path.with_name(path.stem.partition(".gif")[0] + path.suffix))
-    for path in Path(".").glob("*.webm.webm"):
-        path.rename(path.with_name(path.stem.partition(".webm")[0] + path.suffix))
 
 
 # generate all pages for the index in a modular way that can be rapidly prototyped
@@ -374,7 +376,7 @@ def sort_posts(posts, sort):
             posts.sort(key=keyfun, reverse=True)
         case "temporal":
             keyfun = lambda post: int(
-                re.sub("[^0-9]", "", post["data"]["attributes"]["created_at"])
+                re.sub("[^0-9]", "", post["data"]["attributes"]["published_at"])
             )
             posts.sort(key=keyfun, reverse=True)
         case "_":
