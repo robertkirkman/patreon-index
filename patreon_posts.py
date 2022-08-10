@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/python
 import os
 import pickle
 import re
@@ -18,6 +18,7 @@ import ffmpeg
 import jinja2
 import requests
 from PIL import Image
+from PIL import UnidentifiedImageError
 from yt_dlp import YoutubeDL
 
 
@@ -32,13 +33,17 @@ class tag:
         self.nb_name = nb_name
         self.count = count
 
-
+# download all posts in the campaign, mark them with icon and post_type depending on a 
+# custom arbitrary pattern of decisions that uses the post metadata, and store them in a file
 def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token):
     with open(cookies_pickle_filename, "rb") as file:
         cookies = pickle.load(file)
     api_client = patreon.API(access_token)
     campaign_response = api_client.get_campaigns(1)
-    campaign_id = campaign_response.data()[0].id()
+    try:
+        campaign_id = campaign_response.data()[0].id()
+    except AttributeError:
+        print("ACCESS_TOKEN invalid! Please update ACCESS_TOKEN.")
     posts_url = (
         "https://www.patreon.com/api/oauth2/v2/campaigns/"
         + campaign_id
@@ -141,14 +146,15 @@ def download_media(posts_pickle_filename):
                     if exists(vid + ".webp"):
                         os.rename(vid + ".webp", filename)
         elif icon_type == "image" or icon_type == "gif" or icon_type == "link":
-            image_url = post["data"]["attributes"]["image"]["url"]
-            image = requests.get(image_url)
             if icon_type == "gif":
                 image_filename = post_slug + ".gif"
             else:
                 image_filename = post_slug + ".jpg"
-            with open(image_filename, "wb") as f:
-                f.write(image.content)
+            if not exists(image_filename):
+                image_url = post["data"]["attributes"]["image"]["url"]
+                image = requests.get(image_url)
+                with open(image_filename, "wb") as f:
+                    f.write(image.content)
 
 
 # process the media by reencoding, scaling and trimming as desired
@@ -157,28 +163,37 @@ def process_media():
     gifs = [file for file in os.listdir() if file.endswith(("gif"))]
     videos = [file for file in os.listdir() if file.endswith(("webm")) and "processed" not in file]
     for image in images:
-        img = Image.open(image).convert("RGB")
-        img.thumbnail((300, 300))
-        img.save(image.split('.')[0] + "_processed.jpg", optimize=True, quality=85)
+        image_dest = image.split('.')[0] + "_processed.jpg"
+        if not exists(image_dest):
+            try:
+                img = Image.open(image).convert("RGB")
+                img.thumbnail((300, 300))
+                img.save(image_dest, optimize=True, quality=85)
+            except UnidentifiedImageError:
+                print("image invalid or corrupted: " + image)
     for gif in gifs:
-        ffmpeg.input(gif).filter("scale", -1, 300).output(
-            gif.split('.')[0] + "_processed.webm",
-            ss=("00:00:02"),
-            to=("00:00:06"),
-            vcodec="libvpx-vp9",
-            pix_fmt="yuv420p",
-            movflags="faststart",
-            crf=35,
-        ).overwrite_output().run()
+        gif_dest = gif.split('.')[0] + "_processed.webm"
+        if not exists(gif_dest):
+            ffmpeg.input(gif).filter("scale", -1, 300).output(
+                gif_dest,
+                ss=("00:00:02"),
+                to=("00:00:06"),
+                vcodec="libvpx-vp9",
+                pix_fmt="yuv420p",
+                movflags="faststart",
+                crf=35,
+            ).overwrite_output().run()
     for video in videos:
-        ffmpeg.input(video).filter("scale", -1, 300).output(
-            video.split('.')[0] + "_processed.webm",
-            ss=("00:00:06"),
-            to=("00:00:10"),
-            vcodec="libvpx-vp9",
-            movflags="faststart",
-            crf=35,
-        ).overwrite_output().run()
+        video_dest = video.split('.')[0] + "_processed.webm"
+        if not exists(video_dest):
+            ffmpeg.input(video).filter("scale", -1, 300).output(
+                video_dest,
+                ss=("00:00:06"),
+                to=("00:00:10"),
+                vcodec="libvpx-vp9",
+                movflags="faststart",
+                crf=35,
+            ).overwrite_output().run()
 
 
 # generate all pages for the index in a modular way that can be rapidly prototyped
