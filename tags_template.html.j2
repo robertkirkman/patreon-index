@@ -85,7 +85,7 @@
     <div class="tags">
         <!-- python jinja2 iterates every tag to create a long list of links -->
         {% for tag in tags %}
-            <a class="tag_{{tags.index(tag)}}" href="{{tag.name}}.html">{{tag.nb_name}}</a>&nbsp;({{tag.count}}&nbsp;{% if tag.count == 1 %}post{% else %}posts{% endif %})&nbsp;&nbsp; 
+            <a class="tag_{{tags.index(tag)}}" href="{{tag.slug}}.html">{{tag.nb_name}}</a>&nbsp;({{tag.count}}&nbsp;{% if tag.count == 1 %}post{% else %}posts{% endif %})&nbsp;&nbsp; 
         {% endfor %}
     </div>
 </body>

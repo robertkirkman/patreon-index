@@ -26,14 +26,17 @@ from yt_dlp import YoutubeDL
 class tag:
     name = ""
     nb_name = ""
+    slug = ""
     count = 0
 
-    def __init__(self, name, nb_name, count):
+    def __init__(self, name, nb_name, slug, count):
         self.name = name
         self.nb_name = nb_name
+        self.slug = slug
         self.count = count
 
-# download all posts in the campaign, mark them with icon and post_type depending on a 
+
+# download all posts in the campaign, mark them with icon and post_type depending on a
 # custom arbitrary pattern of decisions that uses the post metadata, and store them in a file
 def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token):
     with open(cookies_pickle_filename, "rb") as file:
@@ -159,11 +162,19 @@ def download_media(posts_pickle_filename):
 
 # process the media by reencoding, scaling and trimming as desired
 def process_media():
-    images = [file for file in os.listdir() if file.endswith(("jpg")) and "processed" not in file]
+    images = [
+        file
+        for file in os.listdir()
+        if file.endswith(("jpg")) and "processed" not in file
+    ]
     gifs = [file for file in os.listdir() if file.endswith(("gif"))]
-    videos = [file for file in os.listdir() if file.endswith(("webm")) and "processed" not in file]
+    videos = [
+        file
+        for file in os.listdir()
+        if file.endswith(("webm")) and "processed" not in file
+    ]
     for image in images:
-        image_dest = image.split('.')[0] + "_processed.jpg"
+        image_dest = image.split(".")[0] + "_processed.jpg"
         if not exists(image_dest):
             try:
                 img = Image.open(image).convert("RGB")
@@ -172,7 +183,7 @@ def process_media():
             except UnidentifiedImageError:
                 print("image invalid or corrupted: " + image)
     for gif in gifs:
-        gif_dest = gif.split('.')[0] + "_processed.webm"
+        gif_dest = gif.split(".")[0] + "_processed.webm"
         if not exists(gif_dest):
             ffmpeg.input(gif).filter("scale", -1, 300).output(
                 gif_dest,
@@ -184,7 +195,7 @@ def process_media():
                 crf=35,
             ).overwrite_output().run()
     for video in videos:
-        video_dest = video.split('.')[0] + "_processed.webm"
+        video_dest = video.split(".")[0] + "_processed.webm"
         if not exists(video_dest):
             ffmpeg.input(video).filter("scale", -1, 300).output(
                 video_dest,
@@ -491,12 +502,16 @@ def generate_tag_pages(posts):
     page = (
         jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
         .get_template("tags_template.html.j2")
-        .render(filename=filename, date=current_date, tags=post_tags)
+        .render(
+            filename=filename,
+            date=current_date,
+            tags=post_tags,
+        )
     )
     with open(filename + ".html", "w") as f:
         f.write(page)
     for tag in post_tags:
-        generate_page(posts, tag.name, [tag.name])
+        generate_page(posts, tag.slug, [tag.name])
 
 
 # count the occurrences of posts associated with each possible tag, store the data in a list of tags,
@@ -510,6 +525,7 @@ def extract_tags(posts):
                     tag(
                         post_tag,
                         post_tag.replace(" ", "&nbsp;").replace("-", "&#8209;"),
+                        slugify(post_tag),
                         1,
                     )
                 )
