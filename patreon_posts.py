@@ -72,7 +72,7 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
         )
         post_type = post_json["data"]["attributes"]["post_type"]
         post_tags = tags(post_json)
-        icon_type = "unknown"
+        icon = "unknown"
         if post_type == "text_only" or post_type == "poll":
             icon = "text"
         elif post_type == "image_file" or post_type == "link":
@@ -85,8 +85,12 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
                 icon = "link"
             else:
                 icon = "image"
-        elif post_type == "video_embed":
-            if get_vid(post_json["data"]["attributes"]["embed"]["url"]):
+        elif post_type == "video_embed" or post_type == "video_external_file":
+            if post_type == "video_embed":
+                url = post_json["data"]["attributes"]["embed"]["url"]
+            else:
+                url = post_json["data"]["attributes"]["post_file"]["url"]
+            if get_vid(url):
                 if (
                     "speed video" in post_tags
                     and "Premium video post" not in post_tags
@@ -97,6 +101,7 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
                     icon = "video"
             else:
                 icon = "image"
+        
         post_json["data"]["attributes"]["icon_type"] = icon
         posts.append(post_json)
     with open(posts_pickle_filename, "wb") as file:
@@ -118,34 +123,57 @@ def download_media(posts_pickle_filename):
         print(post_type)
         print(icon_type)
         if icon_type == "video" or icon_type == "speedvideo":
-            yt_url = post["data"]["attributes"]["embed"]["url"]
+            if post_type == "video_embed":
+                yt_url = post["data"]["attributes"]["embed"]["url"]
+            else:
+                yt_url = post["data"]["attributes"]["post_file"]["url"]
             vid = get_vid(yt_url)
             if icon_type == "speedvideo":
                 filename = post_slug + ".webm"
                 while not exists(filename):
-                    ydl_opts = {
-                        "retries": 100,
-                        "ignoreerrors": True,
-                        "outtmpl": "%(id)s",
-                        "format": format_selector,
-                    }
+                    if post_type == "video_embed":
+                        ydl_opts = {
+                            "retries": 100,
+                            "ignoreerrors": True,
+                            "outtmpl": "%(id)s",
+                            "format": format_selector,
+                        }
+                    else:
+                        # this one is NOT a webm yet, it's just named temporarily for convenience
+                        ydl_opts = {
+                            "retries": 100,
+                            "ignoreerrors": True,
+                            "outtmpl": vid + ".webm",
+                        }
+
                     with YoutubeDL(ydl_opts) as ydl:
                         ydl.download(yt_url)
                     if exists(vid + ".webm"):
                         os.rename(vid + ".webm", filename)
             else:
-                filename = post_slug + ".jpg"
+                if post_type == "video_embed":
+                    filename = post_slug + ".jpg"
+                else:
+                    filename = post_slug + "_processed.jpg"
                 while not exists(filename):
-                    ydl_opts = {
-                        "retries": 100,
-                        "ignoreerrors": True,
-                        "writethumbnail": True,
-                        "skip_download": True,
-                        "outtmpl": "%(id)s",
-                        "format": format_selector,
-                    }
-                    with YoutubeDL(ydl_opts) as ydl:
-                        ydl.download(yt_url)
+                    if post_type == "video_embed":
+                        ydl_opts = {
+                            "retries": 100,
+                            "ignoreerrors": True,
+                            "writethumbnail": True,
+                            "skip_download": True,
+                            "outtmpl": "%(id)s",
+                            "format": format_selector,
+                        }
+                        with YoutubeDL(ydl_opts) as ydl:
+                            ydl.download(yt_url)
+                    else:
+                        # this one is a real jpg already
+                        image_url = post["data"]["attributes"]["thumbnail"]["url"]
+                        image = requests.get(image_url)
+                        with open(filename, "wb") as f:
+                            f.write(image.content)
+                    # NOT a jpg yet, named temporarily for convenience
                     if exists(vid + ".webp"):
                         os.rename(vid + ".webp", filename)
         elif icon_type == "image" or icon_type == "gif" or icon_type == "link":
@@ -412,7 +440,7 @@ def sort_posts(posts, sort):
 
 # extract youtube video id from a youtube url
 def get_vid(url):
-    """Returns Video_ID extracting from the given url of Youtube
+    """Returns Video_ID extracting from the given url of Youtube or mux.com
 
     Examples of URLs:
       Valid:
@@ -422,6 +450,7 @@ def get_vid(url):
         'http://www.youtube.com/v/_lOT2p_FCvA?version=3&amp;hl=en_US',
         'https://www.youtube.com/watch?v=rTHlyTphWP0&index=6&list=PLjeDyYvG6-40qawYNR4juzvSOg-ezZ2a6',
         'youtube.com/watch?v=_lOT2p_FCvA',
+        'https://stream.mux.com/MCPFt6R8J9s02NUd9tA01aUZdNqiXQ5cMMecJHlBRiMTw.m3u8?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik5CY3o3Sk5RcUNmdDdWcmo5MWhra2lEY3Vyc2xtRGNmSU1oSFUzallZMDI0In0.eyJzdWIiOiJNQ1BGdDZSOEo5czAyTlVkOXRBMDFhVVpkTnFpWFE1Y01NZWNKSGxCUmlNVHciLCJleHAiOjE2Njk2NDQwMDAsImF1ZCI6InYiLCJwbGF5YmFja19yZXN0cmljdGlvbl9pZCI6IklyMDJGbXFzcVVuTUlwRXFIODlNZGx2V2ExNVF3T282ZENuZWxDdFNJOVlJIn0.UpirIC1KJ8RTUTSnVJxRjanMsakiH25pjRamf0PbKYS2zg6CA7ybNaC0ApIwnOt_H5qnlWKmB913596R8z05trb2vAqlMYQlwh4BdEi-5ROxuc6yeNOUOiuA_ix8IMue4xvmrzG0_PQtRez_-kU58XMgg5W18MbwSm3i7nyuAKU9NGunUkIM21_jcqjMOZ_iAa8PrgIl-DtFwVx_a3DdvLIdzKrvNm7C_-Ap-tZSqh_M-CedXU47A_ZdzeHg33_DErHjl65uRfb1X62pZEPfFlShrsQo_z1_NFPl94MoAiqP0xYCv99_zikO9OEoEal12s1B50NPAdGQlPA8zVgAIg'
 
       Invalid:
         'youtu.be/watch?v=_lOT2p_FCvA',
@@ -439,6 +468,8 @@ def get_vid(url):
             return query.path.split("/")[2]
     elif "youtu.be" in query.hostname:
         return query.path[1:]
+    elif "mux.com" in query.hostname:
+        return query.path[1:].split('.', 1)[0]
     else:
         return ""
 
