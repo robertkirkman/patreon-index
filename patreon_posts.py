@@ -135,19 +135,20 @@ def download_media(posts_pickle_filename):
                         ydl_opts = {
                             "retries": 100,
                             "ignoreerrors": True,
-                            "outtmpl": "%(id)s",
+                            "outtmpl": vid,
                             "format": format_selector,
                         }
                     else:
-                        # this one is NOT a webm yet, it's just named temporarily for convenience
                         ydl_opts = {
                             "retries": 100,
                             "ignoreerrors": True,
-                            "outtmpl": vid + ".webm",
+                            "outtmpl": vid,
                         }
 
                     with YoutubeDL(ydl_opts) as ydl:
                         ydl.download(yt_url)
+                    if exists(vid + ".mp4"):
+                        os.rename(vid + ".mp4", filename)
                     if exists(vid + ".webm"):
                         os.rename(vid + ".webm", filename)
             else:
@@ -474,7 +475,7 @@ def get_vid(url):
         return ""
 
 
-# choose only vp9 webms at least 360p for yt-dlp format selection
+# choose only mp4s at least 360p for yt-dlp format selection
 def format_selector(ctx):
     """Select the best video and the best audio that won't result in an mkv.
     NOTE: This is just an example and does not handle all cases"""
@@ -482,14 +483,13 @@ def format_selector(ctx):
     # formats are already sorted worst to best
     formats = ctx.get("formats")[::-1]
 
-    # first strictly vp9 webm without audio that is at least 240p
+    # first mp4 without audio that is at least 360p
     best_video = next(
         f
         for f in formats
-        if f["vcodec"] == "vp9"
-        and f["acodec"] == "none"
+        if f["acodec"] == "none"
         and f["height"] >= 360
-        and f["ext"] == "webm"
+        and f["ext"] == "mp4"
     )
 
     # These are the minimum required fields for a merged format
