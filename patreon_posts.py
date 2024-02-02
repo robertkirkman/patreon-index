@@ -268,6 +268,7 @@ def generate_site(posts_pickle_filename):
     deer = ["deer"]
     donkey = ["donkey"]
     horse = ["horse"]
+    pig = ["pig"]
     still_life = ["still life"]
     no_subject = ["nada subject"]
     inspiration = ["Inspiration"]
@@ -334,6 +335,7 @@ def generate_site(posts_pickle_filename):
     generate_page(posts, "GOAT", goat, no_subject)
     generate_page(posts, "HORSE", horse, no_subject)
     generate_page(posts, "LANDSCAPE", landscape, no_subject)
+    generate_page(posts, "PIG", pig, no_subject)
     generate_page(posts, "PET PORTRAIT", pet_portrait, no_subject)
     generate_page(posts, "HUMAN PORTRAIT", portrait, no_subject)
     generate_page(posts, "SHEEP", sheep, no_subject)
@@ -351,6 +353,7 @@ def generate_site(posts_pickle_filename):
         + goat
         + horse
         + landscape
+        + pig
         + pet_portrait
         + portrait
         + sheep
