@@ -252,6 +252,7 @@ def generate_site(posts_pickle_filename):
     progress_pic = ["progress pics"]
     speed_video = ["speed video"]
     video_montage = ["video montage"]
+    color_palette = ["color palette"]
     art_tip = ["art tips"]
     conversation = ["conversation"]
     problem_solving = ["problem solving"]
@@ -308,6 +309,7 @@ def generate_site(posts_pickle_filename):
     generate_page(posts, "PROGRESS PIC", progress_pic, premium)
     generate_page(posts, "SPEED VIDEO", speed_video, premium)
     generate_page(posts, "VIDEO MONTAGE", video_montage, premium)
+    generate_page(posts, "COLOR PALETTE", color_palette, premium)
     generate_page(
         posts,
         "OTHER PUBLIC",
@@ -315,6 +317,7 @@ def generate_site(posts_pickle_filename):
         + progress_pic
         + speed_video
         + video_montage
+        + color_palette
         + art_tip
         + conversation
         + inspiration
