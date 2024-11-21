@@ -14,6 +14,7 @@ from pathlib import Path
 from shlex import quote as cmd_quote
 from urllib.parse import parse_qs, urlparse
 
+import pdb
 import ffmpeg
 import jinja2
 import requests
@@ -66,7 +67,12 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
                 "User-Agent": "Patreon-Python, version 0.5.0, platform Linux-5.4.170+-x86_64-with-glibc2.29"
             },
         )
-        post_json = json.loads(post.text)
+
+        try:
+            post_json = json.loads(post.text)
+        except json.decoder.JSONDecodeError:
+            print("failed to load json from post with url: " + post_url)
+
         post_json["data"]["attributes"]["title_slug"] = slugify(
             post_json["data"]["attributes"]["title"]
         )
@@ -87,9 +93,18 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
                 icon = "image"
         elif post_type == "video_embed" or post_type == "video_external_file":
             if post_type == "video_embed":
-                url = post_json["data"]["attributes"]["embed"]["url"]
+                try:
+                    url = post_json["data"]["attributes"]["embed"]["url"]
+                except KeyError:
+                    print("error: " + post_json["data"]["attributes"]["title_slug"] + " has post_type video_embed but has no embed url associated with it")
+                    url = post_json["data"]["attributes"]["url"]
             else:
-                url = post_json["data"]["attributes"]["post_file"]["url"]
+                try:
+                    url = post_json["data"]["attributes"]["post_file"]["url"]
+                except KeyError:
+                    print("error: " + post_json["data"]["attributes"]["title_slug"] + " has post_type video_external_file but has no post_file url associated with it")
+                    url = post_json["data"]["attributes"]["url"]
+
             if get_vid(url):
                 if (
                     "speed video" in post_tags

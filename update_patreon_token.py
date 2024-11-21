@@ -2,7 +2,8 @@
 import sys
 import time
 from selenium.webdriver import Firefox
-from selenium.webdriver import FirefoxProfile
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
@@ -14,9 +15,12 @@ def main():
     profile_path = "profile"
     url = "https://www.patreon.com/portal/registration/register-clients"
     useragent = UserAgent()
-    profile = FirefoxProfile(profile_path)
-    profile.set_preference("general.useragent.override", useragent.random)
-    driver = Firefox(firefox_profile=profile)
+    options = Options()
+    options.add_argument("-profile")
+    options.add_argument(profile_path)
+    options.set_preference("general.useragent.override", useragent.random)
+    service = Service("/usr/bin/geckodriver")
+    driver = Firefox(service = service, options = options)
     driver.get(url)
     token = get_new_token(driver)
     driver.close()
@@ -29,9 +33,9 @@ def get_new_token(driver):
     # refresh_button_xpath = "(//div[contains(concat(' ', normalize-space(@class), ' '), ' sc-iJKOTD qvzkB ')])[2]"
     # token_xpath = "(//span[contains(concat(' ', normalize-space(@class), ' '), ' sc-ieecCq cFhZVW ')])[17]"
     # patreon randomizes their classes, so try absolute xpaths
-    expand_button_xpath = "/html/body/div/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div/div/div[4]/button"
-    refresh_button_xpath = "/html/body/div/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div[2]/div[6]/button"
-    token_xpath = "/html/body/div/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div[2]/div[5]/div[1]/span"
+    expand_button_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div/div[4]/button"
+    refresh_button_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[6]/button"
+    token_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[5]/div[1]/span"
     time.sleep(3)
     try:
         click_button(driver, expand_button_xpath)
