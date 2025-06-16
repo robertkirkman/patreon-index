@@ -48,17 +48,29 @@ def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
         campaign_id = campaign_response.data()[0].id()
     except AttributeError:
         print("ACCESS_TOKEN invalid! Please update ACCESS_TOKEN.")
-    posts_url = (
-        "https://www.patreon.com/api/oauth2/v2/campaigns/"
-        + campaign_id
-        + "/posts?page[size]=100000"
-    )
-    posts_response = requests.get(
-        url=posts_url,
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
+
+    posts_json = []
+    cursor = True
+    while cursor:
+        posts_url = (
+            "https://www.patreon.com/api/oauth2/v2/campaigns/"
+            + campaign_id
+            + "/posts?page[size]=1000"
+        )
+        if cursor and isinstance(cursor, str):
+            posts_url += "&page[cursor]=" + cursor
+        posts_response = requests.get(
+            url=posts_url,
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        try:
+            cursor = json.loads(posts_response.text)["meta"]["pagination"]["cursors"]["next"]
+        except:
+            cursor = False
+        posts_json += json.loads(posts_response.text)["data"]
+
     posts = []
-    for post_iterator in json.loads(posts_response.text)["data"]:
+    for post_iterator in posts_json:
         post_url = "https://www.patreon.com/api/posts/" + post_iterator["id"]
         post = requests.get(
             url=post_url,
