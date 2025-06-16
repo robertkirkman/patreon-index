@@ -33,9 +33,9 @@ def get_new_token(driver):
     # refresh_button_xpath = "(//div[contains(concat(' ', normalize-space(@class), ' '), ' sc-iJKOTD qvzkB ')])[2]"
     # token_xpath = "(//span[contains(concat(' ', normalize-space(@class), ' '), ' sc-ieecCq cFhZVW ')])[17]"
     # patreon randomizes their classes, so try absolute xpaths
-    expand_button_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div/div[4]/button"
-    refresh_button_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[6]/button"
-    token_xpath = "/html/body/div/div[5]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[5]/div[1]/span"
+    expand_button_xpath = "/html/body/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div/div/div[4]/button"
+    refresh_button_xpath = "/html/body/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[6]/button"
+    token_xpath = "/html/body/div[4]/div/main/div[1]/div[3]/div/div/div[2]/div/div/div[2]/div/div/div/div/div[2]/div[5]/div[1]/span"
     time.sleep(3)
     try:
         click_button(driver, expand_button_xpath)
