@@ -299,6 +299,9 @@ def generate_site(posts_pickle_filename):
     still_life = ["still life"]
     no_subject = ["nada subject"]
     inspiration = ["Inspiration"]
+    bug = ["bugs"]
+    caricature = ["caricatures"]
+    squirrel = ["squirrel"]
 
     # deserialize the previously-stored list of posts from pickle file
     if not exists(posts_pickle_filename):
@@ -356,9 +359,13 @@ def generate_site(posts_pickle_filename):
     generate_page(posts, "BIRD", bird, no_subject)
     generate_page(posts, "BUNNY", bunny, no_subject)
     generate_page(posts, "COW", cow, no_subject)
-    generate_page(posts, "DEER", deer, no_subject)
     generate_page(posts, "DONKEY", donkey, no_subject)
-    generate_page(posts, "DRAWING", drawing, no_subject)
+    generate_page(posts, "ALL DRAWING", drawing, no_subject)
+    generate_page(posts, "CARICATURE", caricature, no_subject)
+    generate_page(posts, "LANDSCAPE DRAWING", drawing + landscape, no_subject)
+    generate_page(posts, "ANIMAL DRAWING", drawing + animal, no_subject)
+    generate_page(posts, "HUMAN DRAWING", drawing + portrait, no_subject)
+    generate_page(posts, "OTHER DRAWING", drawing, caricature + landscape + animal + portrait + no_subject)
     generate_page(posts, "GOAT", goat, no_subject)
     generate_page(posts, "HORSE", horse, no_subject)
     generate_page(posts, "LANDSCAPE", landscape, no_subject)
@@ -366,16 +373,21 @@ def generate_site(posts_pickle_filename):
     generate_page(posts, "PET PORTRAIT", pet_portrait, no_subject)
     generate_page(posts, "HUMAN PORTRAIT", portrait, no_subject)
     generate_page(posts, "SHEEP", sheep, no_subject)
+    generate_page(posts, "ALL WILDLIFE", wildlife, no_subject)
+    generate_page(posts, "WILD BIRD", wildlife + bird, no_subject)
+    generate_page(posts, "BUG", bug, no_subject)
+    generate_page(posts, "DEER", deer, no_subject)
+    generate_page(posts, "SQUIRREL", squirrel, no_subject)
+    generate_page(posts, "OTHER WILDLIFE", wildlife, bird + bug + deer + squirrel + no_subject)
     generate_page(posts, "STILL LIFE", still_life, no_subject)
-    generate_page(posts, "WILDLIFE", wildlife, no_subject)
     generate_page(
         posts,
         "OTHER SUBJECT",
         without_tags=bird
         + bunny
         + cow
-        + deer
         + donkey
+        + caricature
         + drawing
         + goat
         + horse
@@ -384,8 +396,11 @@ def generate_site(posts_pickle_filename):
         + pet_portrait
         + portrait
         + sheep
-        + still_life
         + wildlife
+        + bug
+        + deer
+        + squirrel
+        + still_life
         + no_subject,
     )
 
