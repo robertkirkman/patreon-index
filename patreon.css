@@ -341,9 +341,10 @@ br {
 	line-height: 25px;
 }
 
-.date {
+#dateText {
 	font-size: 16px;
 	text-align: right;
+    float: right;
 }
 
 .icon {
@@ -358,4 +359,34 @@ br {
 
 .homepage {
 	line-height: 25px;
+}
+
+ul,
+li {
+	list-style-type: none;
+	list-style-position: inside;
+	margin: 0;
+	padding: 0;
+}
+
+#searchInput
+{
+    height:40px;
+	width: 400px;
+	background: #f6ffd5;
+	font-size: 26px;
+	line-height: 26px;
+	color: #000000;
+	font-family: 'Quattrocento Sans', sans-serif;
+	text-align: left;
+    float: left;
+}
+
+.subheader {
+	padding-top: 10px;
+}
+
+.date {
+	display: inline-block;
+	vertical-align: middle;
 }

@@ -20,7 +20,7 @@ def main():
     options.add_argument(profile_path)
     options.set_preference("general.useragent.override", useragent.random)
     service = Service("/usr/bin/geckodriver")
-    driver = Firefox(service = service, options = options)
+    driver = Firefox(service=service, options=options)
     driver.get(url)
     token = get_new_token(driver)
     driver.close()

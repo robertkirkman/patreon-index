@@ -1,273 +1,161 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+import argparse
+import json
 import os
 import pickle
 import re
-import sys
-import time
-import json
 import unicodedata
-import patreon
+from dataclasses import dataclass, field
 from datetime import date
-from operator import attrgetter
-from os.path import exists
 from pathlib import Path
-from shlex import quote as cmd_quote
+from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
 
-import pdb
 import ffmpeg
 import jinja2
+import patreon
 import requests
-from PIL import Image
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 from yt_dlp import YoutubeDL
 
 
-# tag class to store the data necessary to generate tag page
-class tag:
-    name = ""
-    nb_name = ""
-    slug = ""
-    count = 0
+@dataclass
+class Tag:
+    name: str
+    nb_name: str = field(init=False)
+    slug: str = field(init=False)
+    count: int = 0
 
-    def __init__(self, name, nb_name, slug, count):
-        self.name = name
-        self.nb_name = nb_name
-        self.slug = slug
-        self.count = count
+    def __post_init__(self):
+        self.nb_name = self.name.replace(" ", "\u00a0").replace("-", "\u2011")
+        self.slug = slugify(self.name)
 
 
-# download all posts in the campaign, mark them with icon and post_type depending on a
-# custom arbitrary pattern of decisions that uses the post metadata, and store them in a file
-def download_posts(cookies_pickle_filename, posts_pickle_filename, access_token):
-    with open(cookies_pickle_filename, "rb") as file:
-        cookies = pickle.load(file)
-    api_client = patreon.API(access_token)
-    campaign_response = api_client.get_campaigns(1)
+def download_posts(
+    cookies_pickle_filename: str, posts_pickle_filename: str, access_token: str
+):
+    print("Downloading new posts...", flush=True)
+
     try:
-        campaign_id = campaign_response.data()[0].id()
-    except AttributeError:
-        print("ACCESS_TOKEN invalid! Please update ACCESS_TOKEN.")
-
-    posts_json = []
-    cursor = True
-    while cursor:
-        posts_url = (
-            "https://www.patreon.com/api/oauth2/v2/campaigns/"
-            + campaign_id
-            + "/posts?page[size]=1000"
-        )
-        if cursor and isinstance(cursor, str):
-            posts_url += "&page[cursor]=" + cursor
-        posts_response = requests.get(
-            url=posts_url,
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-        try:
-            cursor = json.loads(posts_response.text)["meta"]["pagination"]["cursors"]["next"]
-        except:
-            cursor = False
-        posts_json += json.loads(posts_response.text)["data"]
-
-    posts = []
-    for post_iterator in posts_json:
-        post_url = "https://www.patreon.com/api/posts/" + post_iterator["id"]
-        post = requests.get(
-            url=post_url,
-            cookies=cookies,
-            headers={
-                "User-Agent": "Patreon-Python, version 0.5.0, platform Linux-5.4.170+-x86_64-with-glibc2.29"
-            },
-        )
-
-        try:
-            post_json = json.loads(post.text)
-        except json.decoder.JSONDecodeError:
-            print("failed to load json from post with url: " + post_url)
-
-        post_json["data"]["attributes"]["title_slug"] = slugify(
-            post_json["data"]["attributes"]["title"]
-        )
-        post_type = post_json["data"]["attributes"]["post_type"]
-        post_tags = tags(post_json)
-        icon = "unknown"
-        if post_type == "text_only" or post_type == "poll":
-            icon = "text"
-        elif post_type == "image_file" or post_type == "link":
-            image_url = post_json["data"]["attributes"]["image"]["url"]
-            if "gif" in str(
-                requests.head(image_url, allow_redirects=True).headers["Content-Type"]
-            ):
-                icon = "gif"
-            elif post_type == "link":
-                icon = "link"
-            else:
-                icon = "image"
-        elif post_type == "video_embed" or post_type == "video_external_file":
-            if post_type == "video_embed":
-                try:
-                    url = post_json["data"]["attributes"]["embed"]["url"]
-                except KeyError:
-                    print("error: " + post_json["data"]["attributes"]["title_slug"] + " has post_type video_embed but has no embed url associated with it")
-                    url = post_json["data"]["attributes"]["url"]
-            else:
-                try:
-                    url = post_json["data"]["attributes"]["post_file"]["url"]
-                except KeyError:
-                    print("error: " + post_json["data"]["attributes"]["title_slug"] + " has post_type video_external_file but has no post_file url associated with it")
-                    url = post_json["data"]["attributes"]["url"]
-
-            if get_vid(url):
-                if (
-                    "speed video" in post_tags
-                    and "Premium video post" not in post_tags
-                    and "video montage" not in post_tags
-                ):
-                    icon = "speedvideo"
-                else:
-                    icon = "video"
-            else:
-                icon = "image"
-        
-        post_json["data"]["attributes"]["icon_type"] = icon
-        posts.append(post_json)
-    with open(posts_pickle_filename, "wb") as file:
-        pickle.dump(posts, file)
-
-
-# use yt-dlp, ffmpeg and pillow to download all non-GIF media referenced by the collected metadata
-def download_media(posts_pickle_filename):
-    if not exists(posts_pickle_filename):
-        print(posts_pickle_filename + " missing! Cannot download media.")
+        with open(cookies_pickle_filename, "rb") as f:
+            cookies = pickle.load(f)
+    except FileNotFoundError:
+        print(f"Error: {cookies_pickle_filename} not found.")
         return
-    with open(posts_pickle_filename, "rb") as file:
-        posts = pickle.load(file)
+
+    api_client = patreon.API(access_token)
+    try:
+        print("Fetching campaign ID from Patreon...", flush=True)
+        campaign_id = api_client.get_campaigns(1).data()[0].id()
+    except (AttributeError, IndexError):
+        print("Error: Invalid ACCESS_TOKEN. Please update it.")
+        return
+
+    posts_data = []
+    cursor = None
+    while True:
+        posts_url = f"https://www.patreon.com/api/oauth2/v2/campaigns/{campaign_id}/posts?page[size]=1000"
+        if cursor:
+            posts_url += f"&page[cursor]={cursor}"
+
+        try:
+            print(f"Fetching new posts from Patreon at {posts_url}...", flush=True)
+            response = requests.get(
+                posts_url, headers={"Authorization": f"Bearer {access_token}"}
+            )
+            response.raise_for_status()
+            data = response.json()
+            posts_data.extend(data["data"])
+            cursor = (
+                data.get("meta", {})
+                .get("pagination", {})
+                .get("cursors", {})
+                .get("next")
+            )
+            if not cursor:
+                break
+        except requests.RequestException as e:
+            print(f"Error fetching posts: {e}")
+            break
+        except json.JSONDecodeError:
+            print("Error decoding JSON from posts API.")
+            break
+
+    print("Fetching new posts completed.", flush=True)
+
+    processed_posts = []
+    for post_data in posts_data:
+        post_url = f"https://www.patreon.com/api/posts/{post_data['id']}"
+        try:
+            post_response = requests.get(
+                post_url,
+                cookies=cookies,
+                headers={
+                    "User-Agent": "Patreon-Python, version 0.5.0, platform Linux-5.4.170+-x86_64-with-glibc2.29"
+                },
+            )
+            post_response.raise_for_status()
+            post_json = post_response.json()
+
+            attributes = post_json["data"]["attributes"]
+            post_slug = slugify(attributes["title"])
+            print(f"Processing post: {post_slug}...", flush=True)
+            attributes["title_slug"] = post_slug
+            attributes["icon_type"] = determine_icon_type(post_json)
+            processed_posts.append(post_json)
+
+        except requests.RequestException as e:
+            print(f"Error fetching post {post_url}: {e}")
+        except json.JSONDecodeError:
+            print(f"Failed to load JSON from post: {post_url}")
+
+    with open(posts_pickle_filename, "wb") as f:
+        pickle.dump(processed_posts, f)
+
+    print("Downloading new posts completed.", flush=True)
+
+
+def download_media(posts_pickle_filename: str):
+    print("Downloading new media...", flush=True)
+
+    posts = load_posts(posts_pickle_filename)
+    if not posts:
+        return
+
     for post in posts:
-        post_slug = post["data"]["attributes"]["title_slug"]
-        post_type = post["data"]["attributes"]["post_type"]
-        icon_type = post["data"]["attributes"]["icon_type"]
-        print(post_slug)
-        print(post_type)
-        print(icon_type)
-        if icon_type == "video" or icon_type == "speedvideo":
-            if post_type == "video_embed":
-                yt_url = post["data"]["attributes"]["embed"]["url"]
-            else:
-                yt_url = post["data"]["attributes"]["post_file"]["url"]
-            vid = get_vid(yt_url)
-            if icon_type == "speedvideo":
-                filename = post_slug + ".webm"
-                while not exists(filename):
-                    if post_type == "video_embed":
-                        ydl_opts = {
-                            "retries": 100,
-                            "ignoreerrors": True,
-                            "outtmpl": vid,
-                            "format": format_selector,
-                        }
-                    else:
-                        ydl_opts = {
-                            "retries": 100,
-                            "ignoreerrors": True,
-                            "outtmpl": vid,
-                        }
+        attrs = post["data"]["attributes"]
+        post_slug = attrs["title_slug"]
+        post_tags = get_post_tags(post)
+        icon_type = attrs["icon_type"]
+        print(f"Downloading {icon_type} media for {post_slug}...")
 
-                    with YoutubeDL(ydl_opts) as ydl:
-                        ydl.download(yt_url)
-                    if exists(vid + ".mp4"):
-                        os.rename(vid + ".mp4", filename)
-                    if exists(vid + ".webm"):
-                        os.rename(vid + ".webm", filename)
-            else:
-                if post_type == "video_embed":
-                    filename = post_slug + ".jpg"
-                else:
-                    filename = post_slug + "_processed.jpg"
-                while not exists(filename):
-                    if post_type == "video_embed":
-                        ydl_opts = {
-                            "retries": 100,
-                            "ignoreerrors": True,
-                            "writethumbnail": True,
-                            "skip_download": True,
-                            "outtmpl": "%(id)s",
-                            "format": format_selector,
-                        }
-                        with YoutubeDL(ydl_opts) as ydl:
-                            ydl.download(yt_url)
-                    else:
-                        # this one is a real jpg already
-                        image_url = post["data"]["attributes"]["thumbnail"]["url"]
-                        image = requests.get(image_url)
-                        with open(filename, "wb") as f:
-                            f.write(image.content)
-                    # NOT a jpg yet, named temporarily for convenience
-                    if exists(vid + ".webp"):
-                        os.rename(vid + ".webp", filename)
-        elif icon_type == "image" or icon_type == "gif" or icon_type == "link":
-            if icon_type == "gif":
-                image_filename = post_slug + ".gif"
-            else:
-                image_filename = post_slug + ".jpg"
-            if not exists(image_filename):
-                image_url = post["data"]["attributes"]["image"]["url"]
-                image = requests.get(image_url)
-                with open(image_filename, "wb") as f:
-                    f.write(image.content)
+        if (
+            icon_type in ("video", "speedvideo")
+            and "Premium video post" not in post_tags
+        ):
+            download_video_media(post, post_slug, icon_type)
+        elif icon_type in ("image", "gif", "link") or "Premium video post" in post_tags:
+            download_image_media(post, post_slug, icon_type)
+
+    print("Downloading new media completed.", flush=True)
 
 
-# process the media by reencoding, scaling and trimming as desired
 def process_media():
-    images = [
-        file
-        for file in os.listdir()
-        if file.endswith(("jpg")) and "processed" not in file
-    ]
-    gifs = [file for file in os.listdir() if file.endswith(("gif"))]
-    videos = [
-        file
-        for file in os.listdir()
-        if file.endswith(("webm")) and "processed" not in file
-    ]
-    for image in images:
-        image_dest = image.split(".")[0] + "_processed.jpg"
-        if not exists(image_dest):
-            try:
-                img = Image.open(image).convert("RGB")
-                img.thumbnail((300, 300))
-                img.save(image_dest, optimize=True, quality=85)
-            except UnidentifiedImageError:
-                print("image invalid or corrupted: " + image)
-    for gif in gifs:
-        gif_dest = gif.split(".")[0] + "_processed.webm"
-        if not exists(gif_dest):
-            ffmpeg.input(gif).filter("scale", -1, 300).output(
-                gif_dest,
-                ss=("00:00:02"),
-                to=("00:00:06"),
-                vcodec="libvpx-vp9",
-                pix_fmt="yuv420p",
-                movflags="faststart",
-                crf=35,
-            ).overwrite_output().run()
-    for video in videos:
-        video_dest = video.split(".")[0] + "_processed.webm"
-        if not exists(video_dest):
-            ffmpeg.input(video).filter("scale", -1, 300).output(
-                video_dest,
-                ss=("00:00:06"),
-                to=("00:00:10"),
-                vcodec="libvpx-vp9",
-                movflags="faststart",
-                crf=35,
-            ).overwrite_output().run()
+    print("Processing new media...", flush=True)
+    process_images()
+    process_gifs()
+    process_videos()
+    print("Processing new media completed.", flush=True)
 
 
-# generate all pages for the index in a modular way that can be rapidly prototyped
-# to demo for the client
-def generate_site(posts_pickle_filename):
-    vos_sort = "ordinal"
-    # tags chosen by the client for a series of manually-chosen categories
+def generate_site(posts_pickle_filename: str):
+    print("Generating pages...", flush=True)
+
+    posts = load_posts(posts_pickle_filename)
+    if not posts:
+        return
+
+    # Client-chosen tags for various categories
     premium = ["Premium video post"]
     vos = ["VOS day"]
     paint_along = ["Paint-Along"]
@@ -303,192 +191,319 @@ def generate_site(posts_pickle_filename):
     caricature = ["caricatures"]
     squirrel = ["squirrel"]
 
-    # deserialize the previously-stored list of posts from pickle file
-    if not exists(posts_pickle_filename):
-        print(posts_pickle_filename + " missing! Cannot generate posts.")
-        return
+    # Page definitions
+    pages = {
+        "ALL": {},
+        "ALL VOS EPISODE": {"with_tags": vos, "sort": "ordinal"},
+        "VOS PAINT-ALONG": {"with_tags": vos + paint_along, "sort": "ordinal"},
+        "VOS ANIMAL": {"with_tags": vos + animal, "sort": "ordinal"},
+        "VOS PORTRAIT": {"with_tags": vos + portrait, "sort": "ordinal"},
+        "VOS LANDSCAPE": {"with_tags": vos + landscape, "sort": "ordinal"},
+        "VOS PASTELING": {"with_tags": vos + pasteling, "sort": "ordinal"},
+        "VOS UNDERPAINTING": {"with_tags": vos + underpainting, "sort": "ordinal"},
+        "OTHER VOS EPISODE": {
+            "with_tags": vos,
+            "without_tags": paint_along
+            + animal
+            + portrait
+            + landscape
+            + pasteling
+            + underpainting,
+            "sort": "ordinal",
+        },
+        "OTHER PREMIUM": {"with_tags": premium, "without_tags": vos},
+        "ALL PUBLIC": {"without_tags": premium},
+        "ART TIP": {"with_tags": art_tip, "without_tags": premium},
+        "BONUS FULL-LENGTH VIDEO": {
+            "with_tags": bonus_full_length_videos,
+            "without_tags": premium,
+        },
+        "CONVERSATION": {"with_tags": conversation, "without_tags": premium},
+        "INSPIRATION": {"with_tags": inspiration, "without_tags": premium},
+        "PROBLEM SOLVING": {"with_tags": problem_solving, "without_tags": premium},
+        "PROGRESS PIC": {"with_tags": progress_pic, "without_tags": premium},
+        "SPEED VIDEO": {"with_tags": speed_video, "without_tags": premium},
+        "VIDEO MONTAGE": {"with_tags": video_montage, "without_tags": premium},
+        "COLOR PALETTE": {"with_tags": color_palette, "without_tags": premium},
+        "OTHER PUBLIC": {
+            "without_tags": premium
+            + progress_pic
+            + speed_video
+            + video_montage
+            + color_palette
+            + art_tip
+            + conversation
+            + inspiration
+            + problem_solving
+            + bonus_full_length_videos
+        },
+        "BIRD": {"with_tags": bird, "without_tags": no_subject},
+        "BUNNY": {"with_tags": bunny, "without_tags": no_subject},
+        "COW": {"with_tags": cow, "without_tags": no_subject},
+        "DONKEY": {"with_tags": donkey, "without_tags": no_subject},
+        "ALL DRAWING": {"with_tags": drawing, "without_tags": no_subject},
+        "CARICATURE": {"with_tags": caricature, "without_tags": no_subject},
+        "LANDSCAPE DRAWING": {
+            "with_tags": drawing + landscape,
+            "without_tags": no_subject,
+        },
+        "ANIMAL DRAWING": {"with_tags": drawing + animal, "without_tags": no_subject},
+        "HUMAN DRAWING": {"with_tags": drawing + portrait, "without_tags": no_subject},
+        "OTHER DRAWING": {
+            "with_tags": drawing,
+            "without_tags": caricature + landscape + animal + portrait + no_subject,
+        },
+        "GOAT": {"with_tags": goat, "without_tags": no_subject},
+        "HORSE": {"with_tags": horse, "without_tags": no_subject},
+        "LANDSCAPE": {"with_tags": landscape, "without_tags": no_subject},
+        "PIG": {"with_tags": pig, "without_tags": no_subject},
+        "PET PORTRAIT": {"with_tags": pet_portrait, "without_tags": no_subject},
+        "HUMAN PORTRAIT": {"with_tags": portrait, "without_tags": no_subject},
+        "SHEEP": {"with_tags": sheep, "without_tags": no_subject},
+        "ALL WILDLIFE": {"with_tags": wildlife, "without_tags": no_subject},
+        "WILD BIRD": {"with_tags": wildlife + bird, "without_tags": no_subject},
+        "BUG": {"with_tags": bug, "without_tags": no_subject},
+        "DEER": {"with_tags": deer, "without_tags": no_subject},
+        "SQUIRREL": {"with_tags": squirrel, "without_tags": no_subject},
+        "OTHER WILDLIFE": {
+            "with_tags": wildlife,
+            "without_tags": bird + bug + deer + squirrel + no_subject,
+        },
+        "STILL LIFE": {"with_tags": still_life, "without_tags": no_subject},
+        "OTHER SUBJECT": {
+            "without_tags": bird
+            + bunny
+            + cow
+            + donkey
+            + caricature
+            + drawing
+            + goat
+            + horse
+            + landscape
+            + pig
+            + pet_portrait
+            + portrait
+            + sheep
+            + wildlife
+            + bug
+            + deer
+            + squirrel
+            + still_life
+            + no_subject
+        },
+    }
 
-    with open(posts_pickle_filename, "rb") as file:
-        posts = pickle.load(file)
-
-    # generate all the pages needed for the index site
-    generate_page(posts, "ALL")
-
-    generate_page(posts, "ALL VOS EPISODE", vos, sort=vos_sort)
-    generate_page(posts, "VOS PAINT-ALONG", vos + paint_along, sort=vos_sort)
-    generate_page(posts, "VOS ANIMAL", vos + animal, sort=vos_sort)
-    generate_page(posts, "VOS PORTRAIT", vos + portrait, sort=vos_sort)
-    generate_page(posts, "VOS LANDSCAPE", vos + landscape, sort=vos_sort)
-    generate_page(posts, "VOS PASTELING", vos + pasteling, sort=vos_sort)
-    generate_page(posts, "VOS UNDERPAINTING", vos + underpainting, sort=vos_sort)
-    generate_page(
-        posts,
-        "OTHER VOS EPISODE",
-        vos,
-        paint_along + animal + portrait + landscape + pasteling + underpainting,
-        vos_sort,
-    )
-    generate_page(posts, "OTHER PREMIUM", premium, vos)
-
-    generate_page(posts, "ALL PUBLIC", without_tags=premium)
-
-    generate_page(posts, "ART TIP", art_tip, premium)
-    generate_page(posts, "BONUS FULL-LENGTH VIDEO", bonus_full_length_videos, premium)
-    generate_page(posts, "CONVERSATION", conversation, premium)
-    generate_page(posts, "INSPIRATION", inspiration, premium)
-    generate_page(posts, "PROBLEM SOLVING", problem_solving, premium)
-    generate_page(posts, "PROGRESS PIC", progress_pic, premium)
-    generate_page(posts, "SPEED VIDEO", speed_video, premium)
-    generate_page(posts, "VIDEO MONTAGE", video_montage, premium)
-    generate_page(posts, "COLOR PALETTE", color_palette, premium)
-    generate_page(
-        posts,
-        "OTHER PUBLIC",
-        without_tags=premium
-        + progress_pic
-        + speed_video
-        + video_montage
-        + color_palette
-        + art_tip
-        + conversation
-        + inspiration
-        + problem_solving
-        + bonus_full_length_videos,
-    )
-
-    generate_page(posts, "BIRD", bird, no_subject)
-    generate_page(posts, "BUNNY", bunny, no_subject)
-    generate_page(posts, "COW", cow, no_subject)
-    generate_page(posts, "DONKEY", donkey, no_subject)
-    generate_page(posts, "ALL DRAWING", drawing, no_subject)
-    generate_page(posts, "CARICATURE", caricature, no_subject)
-    generate_page(posts, "LANDSCAPE DRAWING", drawing + landscape, no_subject)
-    generate_page(posts, "ANIMAL DRAWING", drawing + animal, no_subject)
-    generate_page(posts, "HUMAN DRAWING", drawing + portrait, no_subject)
-    generate_page(posts, "OTHER DRAWING", drawing, caricature + landscape + animal + portrait + no_subject)
-    generate_page(posts, "GOAT", goat, no_subject)
-    generate_page(posts, "HORSE", horse, no_subject)
-    generate_page(posts, "LANDSCAPE", landscape, no_subject)
-    generate_page(posts, "PIG", pig, no_subject)
-    generate_page(posts, "PET PORTRAIT", pet_portrait, no_subject)
-    generate_page(posts, "HUMAN PORTRAIT", portrait, no_subject)
-    generate_page(posts, "SHEEP", sheep, no_subject)
-    generate_page(posts, "ALL WILDLIFE", wildlife, no_subject)
-    generate_page(posts, "WILD BIRD", wildlife + bird, no_subject)
-    generate_page(posts, "BUG", bug, no_subject)
-    generate_page(posts, "DEER", deer, no_subject)
-    generate_page(posts, "SQUIRREL", squirrel, no_subject)
-    generate_page(posts, "OTHER WILDLIFE", wildlife, bird + bug + deer + squirrel + no_subject)
-    generate_page(posts, "STILL LIFE", still_life, no_subject)
-    generate_page(
-        posts,
-        "OTHER SUBJECT",
-        without_tags=bird
-        + bunny
-        + cow
-        + donkey
-        + caricature
-        + drawing
-        + goat
-        + horse
-        + landscape
-        + pig
-        + pet_portrait
-        + portrait
-        + sheep
-        + wildlife
-        + bug
-        + deer
-        + squirrel
-        + still_life
-        + no_subject,
-    )
+    for name, config in pages.items():
+        generate_page(posts, name, **config)
 
     generate_tag_pages(posts)
+    generate_page([], filename="patreon.html", template="patreon.html.j2")
+
+    print("Finished generating pages.", flush=True)
 
 
-# filter by tags and sort the posts, then use jinja2 to populate the page with data and write
-# it to a new file
-def generate_page(posts, filename, with_tags=[], without_tags=[], sort="temporal"):
-    posts = filter_posts(posts, with_tags, without_tags)
-    posts = sort_posts(posts, sort)
-    current_date = date.today()
-    page = (
-        jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
-        .get_template("template.html.j2")
-        .render(filename=filename, date=current_date, posts=posts)
+def determine_icon_type(post: Dict[str, Any]) -> str:
+    attributes = post["data"]["attributes"]
+    post_tags = get_post_tags(post)
+    post_type = attributes.get("post_type", "")
+
+    # special case
+    if "Premium video post" in post_tags:
+        return "video"
+
+    if post_type in ("text_only", "poll"):
+        return "text"
+    if post_type in ("image_file", "link"):
+        image_url = attributes.get("image", {}).get("url", "")
+        if image_url and "gif" in requests.head(
+            image_url, allow_redirects=True
+        ).headers.get("Content-Type", ""):
+            return "gif"
+        return "link" if post_type == "link" else "image"
+    if post_type in ("video_embed", "video_external_file"):
+        url = (
+            (attributes.get("embed") or {}).get("url")
+            or (attributes.get("post_file") or {}).get("url")
+            or attributes.get("url")
+        )
+        if get_vid(url):
+            if "speed video" in post_tags and "video montage" not in post_tags:
+                return "speedvideo"
+            return "video"
+        return "image"
+    return "unknown"
+
+
+def download_video_media(post: Dict[str, Any], post_slug: str, icon_type: str):
+    attrs = post["data"]["attributes"]
+    yt_url = (attrs.get("embed") or {}).get("url") or (
+        attrs.get("post_file") or {}
+    ).get("url")
+    vid = get_vid(yt_url)
+    if not vid:
+        return
+
+    filename = f"{post_slug}.{'webm' if icon_type == 'speedvideo' else 'jpg'}"
+    if Path(filename).exists():
+        print(f"Warning: Reusing cached video {filename}...")
+        return
+
+    ydl_opts = {
+        "retries": 10,
+        "ignoreerrors": True,
+        "outtmpl": vid,
+        "format": format_selector if icon_type == "speedvideo" else None,
+        "writethumbnail": icon_type != "speedvideo",
+        "skip_download": icon_type != "speedvideo",
+    }
+
+    with YoutubeDL(ydl_opts) as ydl:
+        ydl.download([yt_url])
+
+    for ext in [".mp4", ".webm", ".webp"]:
+        if Path(f"{vid}{ext}").exists():
+            Path(f"{vid}{ext}").rename(filename)
+            break
+
+
+def download_image_media(post: Dict[str, Any], post_slug: str, icon_type: str):
+    image_filename = f"{post_slug}.{icon_type if icon_type == 'gif' else 'jpg'}"
+    if Path(image_filename).exists():
+        print(f"Warning: Reusing cached image {image_filename}...")
+        return
+
+    attrs = post["data"]["attributes"]
+    image_url = (attrs.get("post_file") or {}).get("url")
+
+    if not image_url or icon_type == "gif":
+        image_url = (attrs.get("image") or {}).get("url")
+
+    if image_url:
+        try:
+            image_response = requests.get(image_url)
+            image_response.raise_for_status()
+            with open(image_filename, "wb") as f:
+                f.write(image_response.content)
+        except requests.RequestException as e:
+            print(f"Error: Failed to download image: {image_url}: {e}")
+
+
+def process_images():
+    for image_file in Path.cwd().glob("*.jpg"):
+        if "_processed" in image_file.name:
+            continue
+        dest_file = image_file.with_name(f"{image_file.stem}_processed.jpg")
+        if not dest_file.exists():
+            try:
+                with Image.open(image_file).convert("RGB") as img:
+                    img.thumbnail((300, 300))
+                    img.save(dest_file, optimize=True, quality=85)
+            except UnidentifiedImageError:
+                print(f"Error: Image invalid or corrupted: {image_file}")
+
+
+def process_gifs():
+    for gif_file in Path.cwd().glob("*.gif"):
+        if "_processed" in gif_file.name:
+            continue
+        dest_file = gif_file.with_name(f"{gif_file.stem}_processed.webm")
+        if not dest_file.exists():
+            try:
+                ffmpeg.input(str(gif_file)).filter("scale", -1, 300).output(
+                    str(dest_file),
+                    ss="00:00:02",
+                    to="00:00:06",
+                    vcodec="libvpx-vp9",
+                    pix_fmt="yuv420p",
+                    movflags="faststart",
+                    crf=35,
+                ).overwrite_output().run()
+            except ffmpeg.Error as e:
+                print(f"Error: GIF invalid or corrupted: {gif_file}")
+
+
+def process_videos():
+    for video_file in Path.cwd().glob("*.webm"):
+        if "_processed" in video_file.name:
+            continue
+        dest_file = video_file.with_name(f"{video_file.stem}_processed.webm")
+        if not dest_file.exists():
+            try:
+                ffmpeg.input(str(video_file)).filter("scale", -1, 300).output(
+                    str(dest_file),
+                    ss="00:00:06",
+                    to="00:00:10",
+                    vcodec="libvpx-vp9",
+                    movflags="faststart",
+                    crf=35,
+                ).overwrite_output().run()
+            except ffmpeg.Error as e:
+                print(f"Error: Video invalid or corrupted: {video_file}")
+
+
+def generate_page(
+    posts: List[Dict],
+    filename: str,
+    with_tags: Optional[List[str]] = None,
+    without_tags: Optional[List[str]] = None,
+    sort: str = "temporal",
+    template: str = "template.html.j2",
+):
+    filtered_posts = filter_posts(posts, with_tags, without_tags)
+    sorted_posts = sort_posts(filtered_posts, sort)
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
+    template = env.get_template(template)
+    page_content = template.render(
+        filename=filename,
+        date=date.today(),
+        posts=sorted_posts,
     )
-    with open(filename + ".html", "w") as f:
-        f.write(page)
+    with open(f"{filename}.html", "w") as f:
+        f.write(page_content)
 
 
-# filter the list of posts by tags inclusively and exclusively
-def filter_posts(posts, with_tags, without_tags):
+def filter_posts(
+    posts: List[Dict],
+    with_tags: Optional[List[str]] = None,
+    without_tags: Optional[List[str]] = None,
+) -> List[Dict]:
     if with_tags:
-        posts = [post for post in posts if include_tags(post, with_tags)]
+        posts = [p for p in posts if all(t in get_post_tags(p) for t in with_tags)]
     if without_tags:
-        posts = [post for post in posts if exclude_tags(post, without_tags)]
+        posts = [
+            p for p in posts if not any(t in get_post_tags(p) for t in without_tags)
+        ]
     return posts
 
 
-# keep only posts containing all given tags
-def include_tags(post, with_tags):
-    keep = True
-    for tag in with_tags:
-        if tag not in tags(post):
-            keep = False
-    return keep
+def get_post_tags(post: Dict) -> List[str]:
+    return [
+        tag["id"].split(";", 1)[1]
+        for tag in post["data"]["relationships"]["user_defined_tags"]["data"]
+    ]
 
 
-# keep only posts containing none of the given tags
-def exclude_tags(post, without_tags):
-    keep = True
-    for tag in without_tags:
-        if tag in tags(post):
-            keep = False
-    return keep
-
-
-def tags(post):
-    tags = []
-    for tag_iter in post["data"]["relationships"]["user_defined_tags"]["data"]:
-        tags.append(tag_iter["id"].split(";", 1)[1])
-    return tags
-
-
-# sort posts alphabetically case-insensitive, ordinally by the first number detected,
-# or do not sort posts at all
-def sort_posts(posts, sort):
-    match sort:
-        case "alphabetical":
-            keyfun = lambda post: post["data"]["attributes"]["title"].upper()
-            posts.sort(key=keyfun, reverse=False)
-        case "ordinal":
-            keyfun = (
-                lambda post: list(
-                    map(int, re.findall(r"\d+", post["data"]["attributes"]["title"]))
-                )[0]
-                if list(
-                    map(
-                        int,
-                        re.findall(r"\d+", post["data"]["attributes"]["title"]),
-                    )
-                )
-                else 0
-            )
-            posts.sort(key=keyfun, reverse=True)
-        case "temporal":
-            keyfun = lambda post: int(
-                re.sub("[^0-9]", "", post["data"]["attributes"]["published_at"])
-            )
-            posts.sort(key=keyfun, reverse=True)
-        case "_":
-            pass
+def sort_posts(posts: List[Dict], sort: str) -> List[Dict]:
+    if sort == "alphabetical":
+        key = lambda p: p["data"]["attributes"]["title"].upper()
+        posts.sort(key=key)
+    elif sort == "ordinal":
+        key = lambda p: (
+            int(re.findall(r"\d+", p["data"]["attributes"]["title"])[0])
+            if re.findall(r"\d+", p["data"]["attributes"]["title"])
+            else 0
+        )
+        posts.sort(key=key, reverse=True)
+    elif sort == "temporal":
+        key = lambda p: int(
+            re.sub(r"[^0-9]", "", p["data"]["attributes"]["published_at"])
+        )
+        posts.sort(key=key, reverse=True)
     return posts
 
 
 # extract youtube video id from a youtube url
-def get_vid(url):
+def get_vid(url: str) -> str:
     """Returns Video_ID extracting from the given url of Youtube or mux.com
 
     Examples of URLs:
@@ -518,40 +533,34 @@ def get_vid(url):
     elif "youtu.be" in query.hostname:
         return query.path[1:]
     elif "mux.com" in query.hostname:
-        return query.path[1:].split('.', 1)[0]
+        return query.path[1:].split(".", 1)[0]
     else:
         return ""
 
 
-# choose only mp4s at least 360p for yt-dlp format selection
-def format_selector(ctx):
-    """Select the best video and the best audio that won't result in an mkv.
-    NOTE: This is just an example and does not handle all cases"""
-
-    # formats are already sorted worst to best
+def format_selector(ctx: Dict) -> Dict:
     formats = ctx.get("formats")[::-1]
-
-    # first mp4 without audio that is at least 360p
     best_video = next(
-        f
-        for f in formats
-        if f["acodec"] == "none"
-        and f["height"] >= 360
-        and f["ext"] == "mp4"
+        (
+            f
+            for f in formats
+            if f.get("vcodec") != "none"
+            and f.get("acodec") == "none"
+            and f.get("height", 0) >= 360
+            and f.get("ext") == "mp4"
+        ),
+        None,
     )
-
-    # These are the minimum required fields for a merged format
-    yield {
-        "format_id": f'{best_video["format_id"]}',
-        "ext": best_video["ext"],
-        "requested_formats": [best_video],
-        # Must be + separated list of protocols
-        "protocol": f'{best_video["protocol"]}',
-    }
+    if best_video:
+        yield {
+            "format_id": best_video["format_id"],
+            "ext": best_video["ext"],
+            "requested_formats": [best_video],
+            "protocol": best_video["protocol"],
+        }
 
 
-# deterministically convert strings into readable equivalents that are filename-friendly
-def slugify(value, allow_unicode=False):
+def slugify(value: str, allow_unicode: bool = False) -> str:
     """
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
     Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
@@ -572,66 +581,75 @@ def slugify(value, allow_unicode=False):
     return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
-# derive a list of all tags from the list of posts, then iterate it to generate a tag homepage
-# and pages of posts sorted by tags
-def generate_tag_pages(posts):
-    filename = "TAGS"
-    post_tags = extract_tags(posts)
-    current_date = date.today()
-    page = (
-        jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
-        .get_template("tags_template.html.j2")
-        .render(
-            filename=filename,
-            date=current_date,
-            tags=post_tags,
-        )
+def generate_tag_pages(posts: List[Dict]):
+    tags = extract_tags(posts)
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader("./"))
+    template = env.get_template("tags_template.html.j2")
+    page_content = template.render(
+        filename="TAGS",
+        date=date.today(),
+        tags=tags,
     )
-    with open(filename + ".html", "w") as f:
-        f.write(page)
-    for tag in post_tags:
-        generate_page(posts, tag.slug, [tag.name])
+    with open("TAGS.html", "w") as f:
+        f.write(page_content)
+
+    for tag in tags:
+        generate_page(posts, tag.slug, with_tags=[tag.name])
 
 
-# count the occurrences of posts associated with each possible tag, store the data in a list of tags,
-# and generate a non-breaking title for the tag to display nicely on the tags page
-def extract_tags(posts):
-    post_tags = []
+def extract_tags(posts: List[Dict]) -> List[Tag]:
+    tag_counts = {}
     for post in posts:
-        for post_tag in tags(post):
-            if post_tag not in (tag.name for tag in post_tags):
-                post_tags.append(
-                    tag(
-                        post_tag,
-                        post_tag.replace(" ", "&nbsp;").replace("-", "&#8209;"),
-                        slugify(post_tag),
-                        1,
-                    )
-                )
-            else:
-                next(tag for tag in post_tags if tag.name == post_tag).count += 1
-    keyfun = lambda tag: tag.name.upper()
-    post_tags.sort(key=keyfun, reverse=False)
-    return post_tags
+        for tag_name in get_post_tags(post):
+            tag_counts[tag_name] = tag_counts.get(tag_name, 0) + 1
+
+    tags = [Tag(name=name, count=count) for name, count in tag_counts.items()]
+    tags.sort(key=lambda t: t.name.upper())
+    return tags
 
 
-# allow user to choose between downloading all metadata, downloading only n pages of metadata,
-# downloading all media, or generating all pages
+def load_posts(posts_pickle_filename: str) -> Optional[List[Dict]]:
+    try:
+        with open(posts_pickle_filename, "rb") as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        print(f"{posts_pickle_filename} missing! Cannot generate posts.")
+        return None
+
+
 def main():
+    parser = argparse.ArgumentParser(
+        description="Patreon content downloader and site generator."
+    )
+    parser.add_argument(
+        "--download-posts", action="store_true", help="Download all post metadata."
+    )
+    parser.add_argument(
+        "--download-media", action="store_true", help="Download all media."
+    )
+    parser.add_argument(
+        "--process-media", action="store_true", help="Process all downloaded media."
+    )
+    parser.add_argument(
+        "--generate-site", action="store_true", help="Generate the static site."
+    )
+    args = parser.parse_args()
+
     cookies_pickle_filename = "cookies.pickle"
     posts_pickle_filename = "posts.pickle"
     access_token = os.getenv("PATREON_ACCESS_TOKEN")
 
-    if "--download-posts" in sys.argv:
+    if not access_token:
+        print("Error: PATREON_ACCESS_TOKEN environment variable not set.")
+        return
+
+    if args.download_posts:
         download_posts(cookies_pickle_filename, posts_pickle_filename, access_token)
-
-    if "--download-media" in sys.argv:
+    if args.download_media:
         download_media(posts_pickle_filename)
-
-    if "--process-media" in sys.argv:
+    if args.process_media:
         process_media()
-
-    if "--generate-site" in sys.argv:
+    if args.generate_site:
         generate_site(posts_pickle_filename)
 
 
