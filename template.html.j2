@@ -29,8 +29,9 @@
     </nav>
     <div class="subheader">
         <div class="date">
-            <input type="text" id="searchInput" placeholder="Search this list by post title...">
-            <i class="fa-solid fa-xmark"></i>
+        {% if posts|count > 20 %}
+            <input type="text" id="searchInput" placeholder="Search for a post title...">
+        {% endif %}
         </div>
         <div class="date" id="dateText">
             Last updated {{date}}.<br><br>
@@ -40,20 +41,20 @@
         <ul id="postslist">
         <!-- python jinja2 iterates every tag to create a long list of links -->
         {% for post in posts %}
-        <li>
+        <span>
             <img class="icon" src="{{post["data"]["attributes"]["icon_type"]}}.png" alt="image not found">
             <a target="_blank" class="post_{{posts.index(post)}}" href="{{post["data"]["attributes"]["url"]}}">{{post["data"]["attributes"]["title"]}}</a><br>
-        </li>
+        </span>
         {% endfor %}
         </ul>
         <div class="footer"></div>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://s0.2mdn.net/ads/studio/cached_libs/gsap_3.9.1_min.js"></script>
+{% if posts|count > 20 %}
     <script>
         const searchInput = document.getElementById('searchInput');
-        const lists = document.querySelectorAll('#postslist li');
-        const xmarkIcon = document.querySelector('.fa-xmark');
+        const lists = document.querySelectorAll('#postslist span');
         const updateDisplay = () => {
             const searchTerm = searchInput.value.trim().toLowerCase();
             lists.forEach(item => {
@@ -61,13 +62,9 @@
                 item.style.display = languageName.includes(searchTerm) ? 'block' : 'none';
             });
         }
-
         searchInput.addEventListener('input', updateDisplay);
-        xmarkIcon.addEventListener('click', () => {
-            searchInput.value = ''
-            updateDisplay();
-        });
     </script>
+{% endif %}
     <script>
         {% for post in posts %}
             {% if post["data"]["attributes"]["icon_type"] == "speedvideo" or post["data"]["attributes"]["icon_type"] == "gif" or post["data"]["attributes"]["icon_type"] == "image" or post["data"]["attributes"]["icon_type"] == "video" or post["data"]["attributes"]["icon_type"] == "link" %}
