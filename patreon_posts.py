@@ -314,7 +314,11 @@ def determine_icon_type(post: Dict[str, Any]) -> str:
     if post_type in ("text_only", "poll"):
         return "text"
     if post_type in ("image_file", "link"):
-        image_url = attributes.get("image", {}).get("url", "")
+        try:
+            image_url = attributes.get("image", {}).get("url", "")
+        except:
+            # if no image in post, it's a link post
+            return "link"
         if image_url and "gif" in requests.head(
             image_url, allow_redirects=True
         ).headers.get("Content-Type", ""):
