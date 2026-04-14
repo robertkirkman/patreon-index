@@ -1,5 +1,4 @@
 #!/bin/bash
-set -euo pipefail
 cd $(realpath "$(dirname "$0")")
 export DISPLAY=:0.0
 ./update_patreon_token.py 2>&1 | tee update_patreon_token.log
